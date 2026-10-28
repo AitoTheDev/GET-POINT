@@ -1,0 +1,17 @@
+# Optional: PostgreSQL in Docker. Not needed if PostgreSQL is installed locally.
+# Usage: docker compose up -d   (then set DATABASE_URL to the values below)
+services:
+  db:
+    image: postgres:16.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: getpoint
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-getpoint_dev}
+      POSTGRES_DB: getpoint
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

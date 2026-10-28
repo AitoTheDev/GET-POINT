@@ -1,0 +1,35 @@
+{
+  "name": "get-point",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @getpoint/shared",
+    "dev": "npm run build:shared && concurrently -n api,cms,liff -c blue,red,green \"npm run dev -w @getpoint/api\" \"npm run dev -w @getpoint/cms\" \"npm run dev -w @getpoint/liff\"",
+    "dev:api": "npm run build:shared && npm run dev -w @getpoint/api",
+    "dev:cms": "npm run dev -w @getpoint/cms",
+    "build": "npm run build:shared && npm run build -w @getpoint/api -w @getpoint/cms -w @getpoint/liff",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "db:generate": "npm run prisma:generate -w @getpoint/api",
+    "db:migrate": "npm run prisma:migrate -w @getpoint/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "prettier": "^3.4.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.0"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  }
+}

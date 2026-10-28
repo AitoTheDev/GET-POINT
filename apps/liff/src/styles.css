@@ -1,0 +1,51 @@
+:root {
+  --brand-red: #e3141b;
+  --ink: #1f2430;
+  --muted: #8a909c;
+  font-family: 'Noto Sans Thai Looped', 'Noto Sans Thai', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #fdecec 0%, #ffffff 240px);
+  min-height: 100vh;
+}
+
+.screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.logo {
+  width: 180px;
+  margin: 8px auto 24px;
+  display: block;
+  /* The placeholder logo has a white background; blend it into the pink gradient. */
+  mix-blend-mode: multiply;
+}
+
+h1 {
+  font-size: 32px;
+  margin: 0 0 4px;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0 0 32px;
+}
+
+.notice {
+  padding: 16px;
+  border: 1px dashed #d0d3d9;
+  border-radius: 14px;
+  background: #fff;
+}
