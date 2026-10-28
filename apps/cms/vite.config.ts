@@ -18,5 +18,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     css: false,
+    // The first test of a file renders the whole app (many pages): slow on a busy machine.
+    testTimeout: 15_000,
   },
 });

@@ -70,7 +70,7 @@ describe('CMS routing and auth', () => {
     fireEvent.change(screen.getByPlaceholderText('รหัสผ่าน'), { target: { value: 'Passw0rd' } });
     fireEvent.click(screen.getByRole('button', { name: 'เข้าสู่ระบบ' }));
 
-    expect(await screen.findByText('สถานะระบบ')).toBeInTheDocument();
+    expect(await screen.findByText('ภาพรวม GET POINT')).toBeInTheDocument();
     const loginCall = fetchMock.mock.calls.find(([url]) => url === '/api/auth/login');
     expect(JSON.parse(loginCall![1]!.body as string)).toEqual({
       email: 'admin@test.local',

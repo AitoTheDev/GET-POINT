@@ -17,3 +17,9 @@ export function bangkokMonthStart(now = new Date()): Date {
   const local = new Date(now.getTime() + OFFSET_MS);
   return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) - OFFSET_MS);
 }
+
+/** "YYYY-MM-DD" is a real calendar day ("2026-02-31" and "2026-13-01" are not). */
+export function isCalendarDay(day: string): boolean {
+  const date = new Date(`${day}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === day;
+}

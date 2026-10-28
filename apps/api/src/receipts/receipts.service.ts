@@ -89,7 +89,7 @@ const toDay = (date: Date) => date.toISOString().slice(0, 10);
  * Receipts staff may see: those at their Locations, plus receipts not yet placed at a Location
  * from members of their Communities (so someone in scope can pick them up).
  */
-function receiptScope(scope: Scope): Prisma.ReceiptWhereInput {
+export function receiptScope(scope: Scope): Prisma.ReceiptWhereInput {
   if (scope.all) return {};
   return {
     OR: [
@@ -848,8 +848,14 @@ export class ReceiptsService {
     const and: Prisma.ReceiptWhereInput[] = [
       receiptScope(user.scope),
       { status: query.status, locationId: query.locationId, shopId: query.shopId },
-      ...(query.transferStatus ? [{ transaction: { transferStatus: query.transferStatus } }] : []),
     ];
+    if (query.transferStatus === 'NEEDS_RETRY') {
+      and.push({
+        transaction: { transferStatus: { in: ['FAILED', 'UNKNOWN'] }, nextAttemptAt: null },
+      });
+    } else if (query.transferStatus) {
+      and.push({ transaction: { transferStatus: query.transferStatus } });
+    }
     if (query.submittedFrom || query.submittedTo) {
       and.push({
         submittedAt: {

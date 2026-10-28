@@ -149,10 +149,13 @@ export class ListReceiptsQuery {
   @IsIn(STATUSES)
   status?: Status;
 
-  /** Points sending status (approved receipts with points). */
+  /**
+   * Points sending status (approved receipts with points).
+   * NEEDS_RETRY = failed/unknown with no automatic try left (the notification bell links here).
+   */
   @IsOptional()
-  @IsIn(['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'UNKNOWN'])
-  transferStatus?: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'UNKNOWN';
+  @IsIn(['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'UNKNOWN', 'NEEDS_RETRY'])
+  transferStatus?: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'UNKNOWN' | 'NEEDS_RETRY';
 
   /** Receipt code (GP001), phone or receipt number. */
   @IsOptional()

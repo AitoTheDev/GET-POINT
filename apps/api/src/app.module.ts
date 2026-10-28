@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ActivityLogModule } from './activity-log/activity-log.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env';
@@ -10,8 +11,10 @@ import { LogaModule } from './loga/loga.module';
 import { MailModule } from './mail/mail.module';
 import { MembersModule } from './members/members.module';
 import { OrgModule } from './org/org.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PointRulesModule } from './point-rules/point-rules.module';
 import { ReceiptsModule } from './receipts/receipts.module';
+import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings.module';
 import { TransfersModule } from './transfers/transfers.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -40,6 +43,9 @@ import { UsersModule } from './users/users.module';
     ReceiptsModule,
     SettingsModule,
     TransfersModule,
+    ReportsModule,
+    ActivityLogModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -1,4 +1,4 @@
-import { bangkokDayEnd, bangkokDayStart, bangkokMonthStart } from './bangkok-time';
+import { bangkokDayEnd, bangkokDayStart, bangkokMonthStart, isCalendarDay } from './bangkok-time';
 
 describe('Bangkok time helpers', () => {
   it('turns a calendar day into a Bangkok-midnight range', () => {
@@ -14,5 +14,14 @@ describe('Bangkok time helpers', () => {
     expect(bangkokMonthStart(new Date('2026-10-31T17:30:00Z')).toISOString()).toBe(
       '2026-10-31T17:00:00.000Z',
     );
+  });
+});
+
+describe('isCalendarDay', () => {
+  it('accepts real days only', () => {
+    expect(isCalendarDay('2028-02-29')).toBe(true);
+    expect(isCalendarDay('2026-02-29')).toBe(false);
+    expect(isCalendarDay('2026-02-31')).toBe(false);
+    expect(isCalendarDay('2026-13-01')).toBe(false);
   });
 });

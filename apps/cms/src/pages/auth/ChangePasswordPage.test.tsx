@@ -23,7 +23,7 @@ describe('Forced password change', () => {
     fireEvent.change(confirm, { target: { value: 'MyNewPass123' } });
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกรหัสผ่านใหม่' }));
 
-    expect(await screen.findByText('สถานะระบบ')).toBeInTheDocument();
+    expect(await screen.findByText('ภาพรวม GET POINT')).toBeInTheDocument();
     await waitFor(() =>
       expect(sent).toEqual({ currentPassword: 'TempPass2345', newPassword: 'MyNewPass123' }),
     );

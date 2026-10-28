@@ -19,6 +19,7 @@ export const ALL_PERMISSIONS = grants(
  * - Admin: everything, including users/permissions and settings
  * - Staff: receipts, members and reports
  * - Community Manager: locations/shops and point rules
+ * - Staff and Community Manager: Activity Log "view" = their own actions only
  * Admins can change Staff and Community Manager from the Roles & Permissions tab.
  */
 export const SYSTEM_ROLES: {
@@ -43,6 +44,8 @@ export const SYSTEM_ROLES: {
       [Menu.RECEIPT_HISTORY]: 'view',
       [Menu.MEMBERS]: 'manage',
       [Menu.REPORTS]: 'view',
+      // Own actions only (everyone's needs "manage").
+      [Menu.ACTIVITY_LOG]: 'view',
     }),
   },
   {
@@ -54,6 +57,7 @@ export const SYSTEM_ROLES: {
       [Menu.POINT_RULES]: 'manage',
       [Menu.SHOPS]: 'manage',
       [Menu.REPORTS]: 'view',
+      [Menu.ACTIVITY_LOG]: 'view',
     }),
   },
 ];

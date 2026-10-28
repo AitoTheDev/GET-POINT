@@ -8,18 +8,24 @@ import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { ActivityLogPage } from './pages/activity-log/ActivityLogPage';
+import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { MembersPage } from './pages/members/MembersPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PointRulesPage } from './pages/point-rules/PointRulesPage';
 import { HistoryPage } from './pages/receipts/HistoryPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { ReviewPage } from './pages/receipts/ReviewPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { ShopsPage } from './pages/shops/ShopsPage';
 import { UsersPage } from './pages/users/UsersPage';
 
 /** Pages built so far; every other menu shows a placeholder naming its session. */
 const pages: Partial<Record<Menu, ReactElement>> = {
+  [Menu.DASHBOARD]: <DashboardPage />,
+  [Menu.REPORTS]: <ReportsPage />,
+  [Menu.ACTIVITY_LOG]: <ActivityLogPage />,
   [Menu.USERS]: <UsersPage />,
   [Menu.SHOPS]: <ShopsPage />,
   [Menu.MEMBERS]: <MembersPage />,

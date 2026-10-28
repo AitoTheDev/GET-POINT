@@ -1,11 +1,5 @@
-import {
-  BellOutlined,
-  DownOutlined,
-  KeyOutlined,
-  LogoutOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
-import { Avatar, Badge, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
+import { DownOutlined, KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
 import { Menu as MenuKey } from '@getpoint/shared';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useReceiptSummary } from '../api/receipts';
@@ -13,6 +7,7 @@ import logo from '../assets/logo.png';
 import { useAuth } from '../auth/useAuth';
 import { findNavItem, mainNav, settingsNav } from '../navigation';
 import { colors } from '../theme';
+import { NotificationBell } from './NotificationBell';
 
 const { Sider, Header, Content } = Layout;
 
@@ -124,9 +119,7 @@ export function AppLayout() {
           </Typography.Title>
 
           <Space size={28}>
-            <Badge dot color={colors.brandRed} offset={[-3, 3]}>
-              <BellOutlined style={{ fontSize: 24, color: colors.ink, cursor: 'pointer' }} />
-            </Badge>
+            <NotificationBell />
             <Dropdown
               trigger={['click']}
               menu={{

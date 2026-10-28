@@ -43,6 +43,7 @@ import type { SortOrder } from 'antd/es/table/interface';
 import dayjs, { type Dayjs } from 'dayjs';
 import buddhistEra from 'dayjs/plugin/buddhistEra';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiDownload, errorMessage } from '../../api/client';
 import { toQuery } from '../../api/org';
 import {
@@ -69,16 +70,39 @@ interface Draft {
   locationId?: string;
   shopId?: string;
   status?: ReceiptStatus;
-  transferStatus?: TransferStatus;
+  transferStatus?: TransferStatus | 'NEEDS_RETRY';
   range: [Dayjs, Dayjs] | null;
 }
 const EMPTY: Draft = { search: '', range: null };
 
+/** Filter used by the notification bell: failed/unknown sends with no automatic try left. */
+const NEEDS_RETRY_LABEL = 'รอส่งซ้ำด้วยตนเอง';
+const TRANSFER_FILTERS = ['PENDING', 'SUCCEEDED', 'FAILED', 'UNKNOWN', 'NEEDS_RETRY'] as const;
+const isTransferFilter = (v: string | null): v is Draft['transferStatus'] & string =>
+  (TRANSFER_FILTERS as readonly (string | null)[]).includes(v);
+
 /** "ประวัติใบเสร็จ" (mockup image 55). */
 export function HistoryPage() {
   const { message } = App.useApp();
-  const [draft, setDraft] = useState<Draft>(EMPTY);
-  const [filters, setFilters] = useState<ReceiptFilters>({ page: 1, pageSize: 20 });
+  // ?transferStatus=… (from the notification bell) starts the page filtered.
+  const [params] = useSearchParams();
+  const linked = params.get('transferStatus');
+  const initial = isTransferFilter(linked) ? linked : undefined;
+  const [draft, setDraft] = useState<Draft>({ ...EMPTY, transferStatus: initial });
+  const [filters, setFilters] = useState<ReceiptFilters>({
+    page: 1,
+    pageSize: 20,
+    transferStatus: initial,
+  });
+  // Following the bell link while already on this page: start over with that filter.
+  const [seenLink, setSeenLink] = useState(linked);
+  if (linked !== seenLink) {
+    setSeenLink(linked);
+    if (isTransferFilter(linked)) {
+      setDraft({ ...EMPTY, transferStatus: linked });
+      setFilters((f) => ({ page: 1, pageSize: f.pageSize, transferStatus: linked }));
+    }
+  }
   const [openId, setOpenId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const summary = useReceiptSummary();
@@ -229,7 +253,7 @@ export function HistoryPage() {
             )}
             style={{ flex: '1 1 160px' }}
           />
-          <Select<TransferStatus>
+          <Select<Draft['transferStatus']>
             size="large"
             aria-label="กรองตามการส่งแต้ม"
             allowClear
@@ -237,9 +261,9 @@ export function HistoryPage() {
             suffixIcon={<SendOutlined />}
             value={draft.transferStatus}
             onChange={(transferStatus) => setDraft((d) => ({ ...d, transferStatus }))}
-            options={(['PENDING', 'SUCCEEDED', 'FAILED', 'UNKNOWN'] as const).map((v) => ({
+            options={TRANSFER_FILTERS.map((v) => ({
               value: v,
-              label: TransferStatusLabel[v],
+              label: v === 'NEEDS_RETRY' ? NEEDS_RETRY_LABEL : TransferStatusLabel[v],
             }))}
             style={{ flex: '1 1 180px' }}
           />
@@ -404,12 +428,13 @@ export function HistoryPage() {
         </Typography.Text>
       </Flex>
 
-      {openId && <HistoryDrawer id={openId} onClose={() => setOpenId(null)} />}
+      {openId && <ReceiptDrawer id={openId} onClose={() => setOpenId(null)} />}
     </>
   );
 }
 
-function HistoryDrawer({ id, onClose }: { id: string; onClose: () => void }) {
+/** Receipt image and details (also opened from the LOGA report). */
+export function ReceiptDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const receipt = useReceipt(id);
   return (
     <Drawer

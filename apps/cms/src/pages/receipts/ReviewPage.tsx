@@ -26,6 +26,7 @@ import {
   Typography,
 } from 'antd';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '../../api/client';
 import {
   type Receipt,
@@ -55,12 +56,17 @@ export function ReviewPage() {
   const { can } = useAuth();
   const canDecide = can(Menu.RECEIPT_REVIEW, 'manage');
   const [adding, setAdding] = useState(false);
+  // ?code=GP002&status=NEEDS_CHECK opens one receipt (links from the Dashboard).
+  const [params] = useSearchParams();
+  const linkedCode = params.get('code') ?? '';
+  const linkedStatus = params.get('status') === 'NEEDS_CHECK' ? 'NEEDS_CHECK' : 'PENDING_REVIEW';
   const [filters, setFilters] = useState<ReceiptFilters>({
-    status: 'PENDING_REVIEW',
+    status: linkedStatus,
+    search: linkedCode || undefined,
     page: 1,
     pageSize: 20,
   });
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(linkedCode);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const summary = useReceiptSummary();
   // Load reject reasons and upload limits now, so the dialogs open with them ready.

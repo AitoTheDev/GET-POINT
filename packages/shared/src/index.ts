@@ -6,3 +6,4 @@ export * from './members';
 export * from './pointRules';
 export * from './receipts';
 export * from './settings';
+export * from './activity';

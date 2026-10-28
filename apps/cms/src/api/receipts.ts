@@ -130,7 +130,8 @@ export interface CheckResult {
 
 export interface ReceiptFilters {
   status?: ReceiptStatus;
-  transferStatus?: TransferStatus;
+  /** NEEDS_RETRY = failed/unknown with no automatic try left. */
+  transferStatus?: TransferStatus | 'NEEDS_RETRY';
   search?: string;
   locationId?: string;
   shopId?: string;
