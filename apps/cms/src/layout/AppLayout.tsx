@@ -1,6 +1,7 @@
 import { DownOutlined, KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
 import { Menu as MenuKey } from '@getpoint/shared';
+import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useReceiptSummary } from '../api/receipts';
 import logo from '../assets/logo.png';
@@ -8,6 +9,8 @@ import { useAuth } from '../auth/useAuth';
 import { findNavItem, mainNav, settingsNav } from '../navigation';
 import { colors } from '../theme';
 import { NotificationBell } from './NotificationBell';
+import { PageErrorBoundary } from '../components/PageErrorBoundary';
+import { QueryErrorNotifier } from '../components/QueryErrorNotifier';
 
 const { Sider, Header, Content } = Layout;
 
@@ -18,6 +21,13 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { user, can, logout } = useAuth();
   const current = findNavItem(pathname);
+  // Below the "lg" breakpoint the sidebar slides over the page and closes after a choice.
+  const [small, setSmall] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const go = (path: string) => {
+    if (small) setCollapsed(true);
+    navigate(path);
+  };
 
   const visibleNav = mainNav.filter((item) => can(item.menu));
   // Orange count next to ตรวจสอบใบเสร็จ, like the mockup.
@@ -41,6 +51,12 @@ export function AppLayout() {
         width={SIDER_WIDTH}
         breakpoint="lg"
         collapsedWidth={0}
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        onBreakpoint={(broken) => {
+          setSmall(broken);
+          setCollapsed(broken);
+        }}
         style={{
           borderRight: `1px solid ${colors.border}`,
           position: 'sticky',
@@ -61,7 +77,7 @@ export function AppLayout() {
           <Menu
             mode="inline"
             selectedKeys={current ? [current.path] : []}
-            onClick={({ key }) => navigate(key)}
+            onClick={({ key }) => go(key)}
             items={visibleNav.map((item) => ({
               key: item.path,
               icon: item.icon,
@@ -94,7 +110,7 @@ export function AppLayout() {
           <Menu
             mode="inline"
             selectedKeys={current?.path === settingsNav.path ? [settingsNav.path] : []}
-            onClick={({ key }) => (key === 'logout' ? onLogout() : navigate(key))}
+            onClick={({ key }) => (key === 'logout' ? onLogout() : go(key))}
             items={bottomItems}
           />
         </div>
@@ -102,9 +118,9 @@ export function AppLayout() {
 
       <Layout>
         <Header
+          className="gp-header"
           style={{
             height: 76,
-            padding: '0 32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -114,7 +130,11 @@ export function AppLayout() {
             zIndex: 10,
           }}
         >
-          <Typography.Title level={3} style={{ margin: 0, fontWeight: 700 }}>
+          <Typography.Title
+            level={3}
+            className="gp-header-title"
+            style={{ margin: 0, fontWeight: 700 }}
+          >
             {current?.label ?? ''}
           </Typography.Title>
 
@@ -124,6 +144,18 @@ export function AppLayout() {
               trigger={['click']}
               menu={{
                 items: [
+                  {
+                    key: 'me',
+                    disabled: true,
+                    label: (
+                      <span style={{ color: colors.text }}>
+                        {user?.name}
+                        <br />
+                        <small style={{ color: colors.textMuted }}>{user?.email}</small>
+                      </span>
+                    ),
+                  },
+                  { type: 'divider' },
                   { key: 'change-password', icon: <KeyOutlined />, label: 'เปลี่ยนรหัสผ่าน' },
                   { type: 'divider' },
                   { key: 'logout', icon: <LogoutOutlined />, label: 'ออกจากระบบ', danger: true },
@@ -134,7 +166,7 @@ export function AppLayout() {
             >
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar size={44} icon={<UserOutlined />} style={{ background: '#D9DCE1' }} />
-                <Flex vertical style={{ lineHeight: 1.25 }}>
+                <Flex vertical className="gp-header-user" style={{ lineHeight: 1.25 }}>
                   <Typography.Text style={{ fontSize: 16 }}>{user?.name}</Typography.Text>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {user?.role.name}
@@ -146,8 +178,11 @@ export function AppLayout() {
           </Space>
         </Header>
 
-        <Content style={{ padding: '28px 32px' }}>
-          <Outlet />
+        <Content className="gp-content">
+          <QueryErrorNotifier />
+          <PageErrorBoundary key={pathname}>
+            <Outlet />
+          </PageErrorBoundary>
         </Content>
       </Layout>
     </Layout>

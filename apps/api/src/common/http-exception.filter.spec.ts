@@ -60,7 +60,7 @@ describe('HttpExceptionFilter', () => {
   it('hides internals of unknown errors', () => {
     const body = filter.toBody(new Error('password=secret leaked'), '/api/x');
     expect(body.statusCode).toBe(500);
-    expect(body.message).toBe('Internal server error');
+    expect(body.message).toBe('เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง');
     expect(JSON.stringify(body)).not.toContain('secret');
   });
 });

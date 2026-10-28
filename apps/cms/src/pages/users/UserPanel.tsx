@@ -2,11 +2,12 @@ import {
   ExportOutlined,
   InfoCircleOutlined,
   KeyOutlined,
+  LockOutlined,
   MailOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Menu, SystemRole } from '@getpoint/shared';
+import { formatThaiDateTime, Menu, SystemRole } from '@getpoint/shared';
 import {
   Alert,
   App,
@@ -28,6 +29,7 @@ import {
   type UserRow,
   useResetUserPassword,
   useRoles,
+  useUnlockUser,
   useUpdateUser,
 } from '../../api/users';
 import { useAuth } from '../../auth/useAuth';
@@ -50,6 +52,7 @@ export function UserPanel({ user, onEditRoles, onTemporaryPassword }: UserPanelP
   const roles = useRoles();
   const updateUser = useUpdateUser();
   const resetPassword = useResetUserPassword();
+  const unlock = useUnlockUser();
 
   const [roleId, setRoleId] = useState(user.role.id);
   const [scope, setScope] = useState<ScopeInput>(() => rowToScope(user));
@@ -130,6 +133,31 @@ export function UserPanel({ user, onEditRoles, onTemporaryPassword }: UserPanelP
       <Divider style={{ margin: '8px 0 16px' }} />
 
       {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
+      {user.lockedUntil && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<LockOutlined />}
+          style={{ marginBottom: 16 }}
+          message={`บัญชีถูกล็อกถึง ${formatThaiDateTime(user.lockedUntil)} (ใส่รหัสผ่านผิดหลายครั้ง)`}
+          action={
+            canManage && (
+              <Button
+                size="small"
+                loading={unlock.isPending}
+                onClick={() =>
+                  unlock
+                    .mutateAsync(user.id)
+                    .then(() => message.success(`ปลดล็อก ${user.name} แล้ว`))
+                    .catch((err: unknown) => message.error(errorMessage(err)))
+                }
+              >
+                ปลดล็อก
+              </Button>
+            )
+          }
+        />
+      )}
       {isSelf && (
         <Alert
           type="info"

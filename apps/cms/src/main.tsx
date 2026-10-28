@@ -12,6 +12,7 @@ import 'dayjs/locale/th';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { ApiRequestError } from './api/client';
 import { AppRoutes } from './App';
 import { AuthProvider } from './auth/AuthProvider';
 import { theme } from './theme';
@@ -19,7 +20,16 @@ import { theme } from './theme';
 dayjs.locale('th');
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      // A 4xx (no permission, not found, bad filter) won't change on retry; try a network or
+      // server error once more, then report it.
+      retry: (failures, err) =>
+        failures < 1 && !(err instanceof ApiRequestError && err.status >= 400 && err.status < 500),
+    },
+  },
 });
 
 createRoot(document.getElementById('root')!).render(

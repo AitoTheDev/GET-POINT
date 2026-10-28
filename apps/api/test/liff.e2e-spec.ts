@@ -265,6 +265,8 @@ describe('Member app (LIFF) (e2e)', () => {
       }
       const limit = await upload(token, 2).expect(429);
       expect(limit.body.code).toBe('DAILY_LIMIT');
+      // The member gets the real reason, not the generic "too many requests".
+      expect(limit.body.message).toContain('50 ใบต่อวัน');
       await upload(token, 1).expect(201);
 
       await prisma.member.update({ where: { id: m.id }, data: { status: 'SUSPENDED' } });

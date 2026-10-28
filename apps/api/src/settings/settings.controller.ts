@@ -172,6 +172,11 @@ export class SettingsController {
     } catch {
       return { ok: false, message: 'ส่งอีเมลไม่สำเร็จ กรุณาตรวจสอบการตั้งค่า SMTP' };
     }
+    await this.audit.log({
+      action: 'email.test_sent',
+      actorId: user.id,
+      metadata: { to: user.email },
+    });
     return {
       ok: true,
       to: user.email,

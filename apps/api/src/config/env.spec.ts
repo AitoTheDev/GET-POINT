@@ -46,4 +46,25 @@ describe('validateEnv', () => {
     });
     expect(env.LOGA_CARD_ID).toBe('2295');
   });
+
+  it('refuses development stand-ins in production', () => {
+    const prod = { ...base, NODE_ENV: 'production' };
+    expect(() => validateEnv(prod)).toThrow(/LINE_MODE/);
+    expect(() => validateEnv(prod)).toThrow(/LOGA_MODE/);
+    expect(() =>
+      validateEnv({ ...prod, JWT_ACCESS_SECRET: 'CHANGE_ME_TO_A_LONG_RANDOM_STRING' }),
+    ).toThrow(/JWT_ACCESS_SECRET/);
+    const live = validateEnv({
+      ...prod,
+      LOGA_MODE: 'live',
+      LOGA_USERNAME: 'a@b.c',
+      LOGA_PASSWORD: 'secret',
+      LOGA_CARD_ID: '2295',
+      LINE_MODE: 'live',
+      LINE_CHANNEL_ID: '1650000000',
+      LIFF_ID: '1650000000-abcdefgh',
+      TRUST_PROXY: '1',
+    });
+    expect(live.TRUST_PROXY).toBe(1);
+  });
 });

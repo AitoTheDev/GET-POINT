@@ -115,6 +115,11 @@ export function UsersTab({ onEditRoles, onTemporaryPassword }: UsersTabProps) {
                     <Avatar size={44} icon={<UserOutlined />} style={{ background: '#D9DCE1' }} />
                     <div style={{ minWidth: 0 }}>
                       <Typography.Text strong>{user.name}</Typography.Text>
+                      {user.lockedUntil && (
+                        <Tag color="red" style={{ marginLeft: 8 }}>
+                          ถูกล็อก
+                        </Tag>
+                      )}
                       {user.mustChangePassword && (
                         <Tag color="orange" style={{ marginLeft: 8 }}>
                           รอเปลี่ยนรหัสผ่าน

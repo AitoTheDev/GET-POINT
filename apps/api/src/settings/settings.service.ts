@@ -1,6 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   REJECT_REASONS,
+  LOGIN_SECURITY_LIMITS,
   RETRY_LIMIT_CAPS,
   type SettingKey,
   type SettingsValues,
@@ -50,6 +51,20 @@ const SCHEMAS: { [K in SettingKey]: z.ZodType<SettingsValues[K], z.ZodTypeDef, u
     lineId: optionalText(50, 'LINE ID'),
   }),
   memberSignup: z.object({ verifyPhone: z.boolean() }).strict(),
+  loginSecurity: z
+    .object({
+      maxFailedAttempts: int(
+        LOGIN_SECURITY_LIMITS.maxFailedAttempts.min,
+        LOGIN_SECURITY_LIMITS.maxFailedAttempts.max,
+        'จำนวนครั้ง',
+      ),
+      lockMinutes: int(
+        LOGIN_SECURITY_LIMITS.lockMinutes.min,
+        LOGIN_SECURITY_LIMITS.lockMinutes.max,
+        'ระยะเวลาล็อก',
+      ),
+    })
+    .strict(),
   rejectReasons: z
     .object(
       Object.fromEntries(

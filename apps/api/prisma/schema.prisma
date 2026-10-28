@@ -455,6 +455,10 @@ model User {
   /// Set after an admin reset; the user must choose a new password at next login.
   mustChangePassword Boolean    @default(false) @map("must_change_password")
   lastLoginAt        DateTime?  @map("last_login_at")
+  /// Wrong passwords in a row (reset by a successful login or a password reset).
+  failedLoginCount   Int        @default(0) @map("failed_login_count")
+  /// Locked after too many wrong passwords (Settings > loginSecurity); null = not locked.
+  lockedUntil        DateTime?  @map("locked_until")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
 

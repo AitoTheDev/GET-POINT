@@ -38,6 +38,16 @@ describe('Auth (e2e)', () => {
       expect(cookie[0]).not.toMatch(/Expires=/i);
     });
 
+    it('sends security headers and no X-Powered-By', async () => {
+      const res = await api(app).get('/health').expect(200);
+      expect(res.headers['x-powered-by']).toBeUndefined();
+      expect(res.headers).toMatchObject({
+        'x-content-type-options': 'nosniff',
+        'x-frame-options': 'DENY',
+        'cache-control': 'no-store',
+      });
+    });
+
     it('sets a persistent cookie with remember me', async () => {
       const res = await api(app)
         .post('/auth/login')

@@ -18,3 +18,59 @@ body {
 .gp-sider .ant-menu-vertical {
   border-inline-end: none !important;
 }
+
+/* Page spacing: roomy on desktop, 16px side gutters on phones. */
+.gp-header.ant-layout-header {
+  padding: 0 32px;
+}
+.gp-content {
+  padding: 28px 32px;
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .gp-header.ant-layout-header {
+    padding: 0 16px 0 56px; /* room for the sidebar toggle */
+  }
+  .gp-content {
+    padding: 20px 16px;
+  }
+}
+
+/* The sidebar's "open" button on small screens: dark so it shows on the white header. */
+.gp-sider .ant-layout-sider-zero-width-trigger {
+  top: 18px;
+  background: #1f2430;
+  color: #fff;
+  border-radius: 0 10px 10px 0;
+  z-index: 20; /* above the sticky header */
+}
+/* The collapsed sidebar must not clip its own button. */
+.gp-sider.ant-layout-sider-zero-width {
+  overflow: visible;
+  z-index: 20;
+}
+.gp-header-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .gp-header-title.ant-typography {
+    font-size: 20px;
+  }
+  /* Phones: avatar only (the name is in the account menu). */
+  .gp-header-user {
+    display: none !important;
+  }
+}
+
+/* Small screens: the open sidebar slides over the page instead of squeezing it. */
+@media (max-width: 991px) {
+  .gp-sider.ant-layout-sider:not(.ant-layout-sider-zero-width) {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    z-index: 30;
+    box-shadow: 8px 0 24px rgba(31, 36, 48, 0.18);
+  }
+}

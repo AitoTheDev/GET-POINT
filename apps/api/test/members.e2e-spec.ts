@@ -332,6 +332,22 @@ describe('Members (e2e)', () => {
 
       const summary = await api(app, admin).get('/members/summary').expect(200);
       expect(summary.body).toEqual({ total: 4, newThisMonth: 1, withReceipts: 0, active: 3 });
+
+      // One member sends two receipts: counted once.
+      const sub = await prisma.submission.create({ data: { memberId: now.body.id } });
+      await prisma.receipt.createMany({
+        data: [1, 2].map((sequence) => ({
+          submissionId: sub.id,
+          sequence,
+          memberId: now.body.id,
+          imagePath: `x/${sequence}.jpg`,
+          imageMime: 'image/jpeg',
+          imageSize: 10,
+          imageSha256: `h${sequence}`,
+        })),
+      });
+      const after = await api(app, admin).get('/members/summary').expect(200);
+      expect(after.body.withReceipts).toBe(1);
     });
 
     it('returns live LOGA points per member, and LOGA details', async () => {

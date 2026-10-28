@@ -3,6 +3,8 @@ export const ActivityLabel: Record<string, string> = {
   'auth.login': 'เข้าสู่ระบบ',
   'auth.login_failed': 'เข้าสู่ระบบไม่สำเร็จ',
   'auth.logout': 'ออกจากระบบ',
+  'auth.locked': 'บัญชีถูกล็อก (รหัสผ่านผิดหลายครั้ง)',
+  'auth.login_locked': 'พยายามเข้าสู่ระบบขณะบัญชีถูกล็อก',
   'auth.password_changed': 'เปลี่ยนรหัสผ่าน',
   'auth.password_reset_requested': 'ขอลิงก์รีเซ็ตรหัสผ่าน',
   'auth.password_reset_completed': 'ตั้งรหัสผ่านใหม่จากลิงก์',
@@ -10,6 +12,7 @@ export const ActivityLabel: Record<string, string> = {
   'user.updated': 'แก้ไขผู้ใช้งาน',
   'user.password_reset_by_admin': 'ออกรหัสผ่านชั่วคราว',
   'user.password_reset_emailed': 'ส่งลิงก์รีเซ็ตรหัสผ่าน',
+  'user.unlocked': 'ปลดล็อกบัญชีผู้ใช้งาน',
   'role.created': 'เพิ่มบทบาท',
   'role.updated': 'แก้ไขบทบาทและสิทธิ์',
   'role.deleted': 'ลบบทบาท',
@@ -46,6 +49,7 @@ export const ActivityLabel: Record<string, string> = {
   'setting.updated': 'แก้ไขการตั้งค่า',
   'loga.connection_tested': 'ทดสอบการเชื่อมต่อ LOGA',
   'loga.mock_mode_changed': 'เปลี่ยนโหมด LOGA จำลอง',
+  'email.test_sent': 'ส่งอีเมลทดสอบ',
   'report.exported': 'Export รายงาน',
 };
 
@@ -66,6 +70,7 @@ export const ActivityGroupLabel: Record<string, string> = {
   transfer: 'ส่งแต้มไป LOGA',
   setting: 'การตั้งค่า',
   loga: 'LOGA',
+  email: 'อีเมล',
   report: 'รายงาน',
 };
 

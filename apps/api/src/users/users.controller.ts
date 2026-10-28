@@ -64,4 +64,11 @@ export class UsersController {
   ) {
     return this.users.resetPassword(id, dto.method, user.id);
   }
+
+  @RequirePermission(Menu.USERS, 'manage')
+  @Post(':id/unlock')
+  @HttpCode(200)
+  unlock(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
+    return this.users.unlock(id, user.id);
+  }
 }

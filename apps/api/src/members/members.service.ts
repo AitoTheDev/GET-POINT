@@ -83,13 +83,13 @@ export class MembersService {
   /** KPI cards at the top of the Members page. */
   async summary(user: RequestUser) {
     const scope = memberScope(user);
-    const [total, newThisMonth, active] = await this.prisma.$transaction([
+    const [total, newThisMonth, active, withReceipts] = await this.prisma.$transaction([
       this.prisma.member.count({ where: scope }),
       this.prisma.member.count({ where: { ...scope, createdAt: { gte: bangkokMonthStart() } } }),
       this.prisma.member.count({ where: { ...scope, status: 'ACTIVE' } }),
+      this.prisma.member.count({ where: { ...scope, receipts: { some: {} } } }),
     ]);
-    // Members who sent receipts: counted from receipts once they exist (Session 5).
-    return { total, newThisMonth, withReceipts: 0, active };
+    return { total, newThisMonth, withReceipts, active };
   }
 
   /** Communities the user can pick in filters and the add-member form. */

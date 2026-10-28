@@ -1,11 +1,18 @@
 import { MailOutlined } from '@ant-design/icons';
-import { formatNumber, formatThaiDateTime } from '@getpoint/shared';
-import { Alert, App, Button, Col, Descriptions, Row, Space } from 'antd';
+import {
+  formatNumber,
+  formatThaiDateTime,
+  LOGIN_SECURITY_LIMITS,
+  type SettingsValues,
+} from '@getpoint/shared';
+import { Alert, App, Button, Col, Descriptions, Form, Row, Space } from 'antd';
 import { useState } from 'react';
 import { errorMessage } from '../../api/client';
 import { type CheckResult, type SettingsPage, useTestEmail } from '../../api/settings';
+import { AddonNumber } from '../../components/AddonNumber';
 import { StatusPill } from '../../components/StatusPill';
 import { SettingCard } from './SettingCard';
+import { useSettingSave } from './useSettingSave';
 
 interface TabProps {
   data: SettingsPage;
@@ -38,6 +45,9 @@ export function SystemTab({ data, canManage }: TabProps) {
 
   return (
     <Row gutter={[20, 20]}>
+      <Col xs={24} xl={12}>
+        <LoginSecurityCard data={data} canManage={canManage} />
+      </Col>
       <Col xs={24} xl={12}>
         <SettingCard
           title="อีเมล (SMTP)"
@@ -109,5 +119,71 @@ export function SystemTab({ data, canManage }: TabProps) {
         </SettingCard>
       </Col>
     </Row>
+  );
+}
+
+/** Staff login: wrong passwords in a row before the account locks, and for how long. */
+function LoginSecurityCard({ data, canManage }: TabProps) {
+  const [form] = Form.useForm<SettingsValues['loginSecurity']>();
+  const { save, saving, error } = useSettingSave('loginSecurity');
+  const { maxFailedAttempts, lockMinutes } = LOGIN_SECURITY_LIMITS;
+  return (
+    <SettingCard
+      title="ความปลอดภัยการเข้าสู่ระบบ"
+      description="ใส่รหัสผ่านผิดติดกันครบจำนวนนี้ บัญชีจะถูกล็อกชั่วคราว ผู้ดูแลระบบปลดล็อกได้ที่หน้าผู้ใช้งาน หรือผู้ใช้ตั้งรหัสผ่านใหม่ผ่านอีเมล"
+      settingKey="loginSecurity"
+      changes={data.changes}
+      error={error}
+      saving={saving}
+      onSave={
+        canManage
+          ? () =>
+              form
+                .validateFields()
+                .then(save)
+                .catch(() => {})
+          : undefined
+      }
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={data.values.loginSecurity}
+        disabled={!canManage}
+      >
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              label="รหัสผ่านผิดได้"
+              name="maxFailedAttempts"
+              rules={[{ required: true, message: 'กรุณากรอกจำนวนครั้ง' }]}
+            >
+              <AddonNumber
+                aria-label="จำนวนครั้งที่ใส่รหัสผ่านผิดได้"
+                after="ครั้ง"
+                min={maxFailedAttempts.min}
+                max={maxFailedAttempts.max}
+                precision={0}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              label="ล็อกบัญชีนาน"
+              name="lockMinutes"
+              rules={[{ required: true, message: 'กรุณากรอกระยะเวลา' }]}
+            >
+              <AddonNumber
+                aria-label="ระยะเวลาล็อกบัญชี (นาที)"
+                after="นาที"
+                min={lockMinutes.min}
+                max={lockMinutes.max}
+                precision={0}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
+    </SettingCard>
   );
 }

@@ -8,6 +8,11 @@ const optional = z
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
+  /**
+   * Reverse proxies in front of the API (e.g. 1 behind nginx/a load balancer), so the client IP
+   * used for rate limits and the audit log is the real one. 0 = the API is reached directly.
+   */
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   DATABASE_URL: z.string().url(),
   CORS_ORIGINS: z
     .string()
@@ -98,6 +103,23 @@ export function validateEnv(raw: Record<string, unknown>): Env {
           path: ['LINE_MODE'],
           message: 'must be live in production',
         });
+      }
+      if (env.NODE_ENV === 'production') {
+        if (env.LOGA_MODE !== 'live') {
+          // Points would only be "sent" to an in-memory fake and lost.
+          ctx.addIssue({
+            code: 'custom',
+            path: ['LOGA_MODE'],
+            message: 'must be live in production',
+          });
+        }
+        if (/CHANGE_ME/i.test(env.JWT_ACCESS_SECRET)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['JWT_ACCESS_SECRET'],
+            message: 'still the example value; generate a random secret',
+          });
+        }
       }
     })
     .safeParse(raw);

@@ -34,9 +34,10 @@ describe('Rate limiting (e2e)', () => {
     const statuses: number[] = [];
     let last: request.Response | undefined;
     for (let i = 0; i < 22; i++) {
+      // An unknown email: a real account would hit its own 5-try lock first (423).
       last = await api(app)
         .post('/auth/login')
-        .send({ email: 'admin@test.local', password: 'Wrong1234' });
+        .send({ email: 'nobody@test.local', password: 'Wrong1234' });
       statuses.push(last.status);
     }
     expect(statuses.slice(0, 19).every((s) => s === 401)).toBe(true);

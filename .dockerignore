@@ -1,0 +1,19 @@
+# Keep build contexts small and free of secrets.
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+.git
+.claude
+CLAUDE.md
+**/CLAUDE.md
+*.zip
+mockups
+docs
+tmp
+**/.env
+**/.env.*
+!**/.env.example
+apps/api/storage
+apps/api/uploads
+deploy/.env.production

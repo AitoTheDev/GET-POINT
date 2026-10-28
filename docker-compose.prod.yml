@@ -1,0 +1,88 @@
+# GET POINT: production stack (database, API, staff CMS, member LIFF app).
+#   cp deploy/.env.production.example deploy/.env.production   # then fill it in
+#   docker compose -f docker-compose.prod.yml --env-file deploy/.env.production up -d --build
+# See deploy/README.md for first install, updates and backups.
+name: getpoint
+
+services:
+  db:
+    image: postgres:16.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-getpoint}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-getpoint}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Not published to the host: only the API reaches it.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: deploy/.env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-getpoint}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-getpoint}?schema=public
+      RECEIPT_STORAGE_DIR: /data/receipts
+    volumes:
+      - receipts:/data/receipts
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # First start runs the migrations.
+      start_period: 60s
+
+  cms:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+      args:
+        APP: cms
+    restart: unless-stopped
+    ports:
+      - '${CMS_PORT:-8080}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  liff:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+      args:
+        APP: liff
+    restart: unless-stopped
+    ports:
+      - '${LIFF_PORT:-8081}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:
+  receipts:

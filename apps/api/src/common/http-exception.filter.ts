@@ -64,10 +64,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const rawCode = (response as { code?: unknown }).code;
         if (typeof rawCode === 'string') code = rawCode;
       }
-      if (statusCode === HttpStatus.PAYLOAD_TOO_LARGE) {
+      // Framework errors (upload limit, rate limiter) get Thai wording; a service's own
+      // message with a `code` (e.g. DAILY_LIMIT, CODE_WAIT) is kept as written.
+      if (statusCode === HttpStatus.PAYLOAD_TOO_LARGE && !code) {
         message = 'ไฟล์มีขนาดเกิน 10 MB';
       }
-      if (statusCode === HttpStatus.TOO_MANY_REQUESTS) {
+      if (statusCode === HttpStatus.TOO_MANY_REQUESTS && !code) {
         message = 'มีการเรียกใช้งานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
       }
 
@@ -85,7 +87,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       error: 'INTERNAL_SERVER_ERROR',
-      message: 'Internal server error',
+      // Never the real error (it may contain internals); details go to the server log only.
+      message: 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง',
       path,
       timestamp,
     };

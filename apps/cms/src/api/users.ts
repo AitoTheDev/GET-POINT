@@ -17,6 +17,8 @@ export interface UserRow {
   status: UserStatus;
   mustChangePassword: boolean;
   lastLoginAt: string | null;
+  /** Set while locked after too many wrong passwords. */
+  lockedUntil: string | null;
   createdAt: string;
   role: { id: string; key: string; name: string };
   scope: { all: boolean; communities: Ref[]; locations: Ref[] };
@@ -132,6 +134,14 @@ export function useResetUserPassword() {
         | { method: 'temporary'; temporaryPassword: string }
         | { method: 'email'; emailConfigured: boolean }
       >('POST', `/users/${id}/reset-password`, { method }),
+  });
+}
+
+export function useUnlockUser() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => apiSend<UserRow>('POST', `/users/${id}/unlock`),
+    onSuccess: invalidate,
   });
 }
 

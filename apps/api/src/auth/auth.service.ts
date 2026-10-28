@@ -2,6 +2,8 @@ import type { AuthUser } from '@getpoint/shared';
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import type { Env } from '../config/env';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import type { AccessTokenPayload } from './auth.guard';
 import { authUserInclude, type RequestUser, toAuthUser } from './auth-user';
 import {
@@ -37,6 +40,19 @@ export interface IssuedSession {
 const INVALID_LOGIN = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
 const HOUR_MS = 60 * 60 * 1000;
 
+/** "Locked, try again in N minutes" (code ACCOUNT_LOCKED, with the time it ends). */
+function lockedError(lockedUntil: Date) {
+  const minutes = Math.max(1, Math.ceil((lockedUntil.getTime() - Date.now()) / 60_000));
+  return new HttpException(
+    {
+      message: `บัญชีถูกล็อกชั่วคราวเพราะใส่รหัสผ่านผิดหลายครั้ง กรุณาลองใหม่ในอีก ${minutes} นาที หรือติดต่อผู้ดูแลระบบ`,
+      code: 'ACCOUNT_LOCKED',
+      lockedUntil: lockedUntil.toISOString(),
+    },
+    HttpStatus.LOCKED,
+  );
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -45,6 +61,7 @@ export class AuthService {
     private readonly config: ConfigService<Env, true>,
     private readonly audit: AuditService,
     private readonly mail: MailService,
+    private readonly settings: SettingsService,
   ) {}
 
   async login(
@@ -60,6 +77,18 @@ export class AuthService {
 
     // Always run bcrypt so response time doesn't reveal whether the email exists.
     const ok = await verifyPassword(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+
+    // Locked: refuse even the right password until the lock ends.
+    if (user?.lockedUntil && user.lockedUntil > new Date()) {
+      await this.audit.log({
+        action: 'auth.login_locked',
+        actorId: user.id,
+        entityType: 'user',
+        entityId: user.id,
+        ip: meta.ip,
+      });
+      throw lockedError(user.lockedUntil);
+    }
     if (!user || !ok) {
       await this.audit.log({
         action: 'auth.login_failed',
@@ -67,6 +96,7 @@ export class AuthService {
         metadata: { email },
         ip: meta.ip,
       });
+      if (user) await this.countFailure(user.id, meta.ip);
       throw new UnauthorizedException(INVALID_LOGIN);
     }
     if (user.status !== 'ACTIVE') {
@@ -86,7 +116,10 @@ export class AuthService {
           userAgent: meta.userAgent?.slice(0, 255),
         },
       });
-      await tx.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+      await tx.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date(), failedLoginCount: 0, lockedUntil: null },
+      });
       await this.audit.log(
         {
           action: 'auth.login',
@@ -107,6 +140,38 @@ export class AuthService {
       expiresAt,
       user: toAuthUser(user),
     };
+  }
+
+  /**
+   * One more wrong password; at the limit the account is locked (Settings > loginSecurity).
+   * The count is increased in the database so parallel attempts can't slip past the limit.
+   */
+  private async countFailure(userId: string, ip?: string) {
+    const { maxFailedAttempts, lockMinutes } = await this.settings.get('loginSecurity');
+    const { failedLoginCount } = await this.prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginCount: { increment: 1 } },
+      select: { failedLoginCount: true },
+    });
+    if (failedLoginCount < maxFailedAttempts) return;
+
+    const lockedUntil = new Date(Date.now() + lockMinutes * 60_000);
+    // Only the attempt that reaches the limit locks (and logs) it.
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, failedLoginCount: { gte: maxFailedAttempts } },
+      data: { failedLoginCount: 0, lockedUntil },
+    });
+    if (count) {
+      await this.audit.log({
+        action: 'auth.locked',
+        actorId: userId,
+        entityType: 'user',
+        entityId: userId,
+        metadata: { attempts: maxFailedAttempts, minutes: lockMinutes },
+        ip,
+      });
+    }
+    throw lockedError(lockedUntil);
   }
 
   /** Exchange a refresh token for a new access token. The refresh token is rotated each time. */
@@ -271,7 +336,8 @@ export class AuthService {
 
       await tx.user.update({
         where: { id: record.userId },
-        data: { passwordHash, mustChangePassword: false },
+        // Proving the email address also lifts a login lock.
+        data: { passwordHash, mustChangePassword: false, failedLoginCount: 0, lockedUntil: null },
       });
       await tx.authSession.updateMany({
         where: { userId: record.userId, revokedAt: null },

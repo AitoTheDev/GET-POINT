@@ -30,6 +30,8 @@ export interface SettingsValues {
   supportContact: { phone: string | null; lineId: string | null };
   /** LINE sign-up: true = members must type an SMS code sent to their phone. */
   memberSignup: { verifyPhone: boolean };
+  /** Staff login: this many wrong passwords in a row lock the account for lockMinutes. */
+  loginSecurity: { maxFailedAttempts: number; lockMinutes: number };
   rejectReasons: Record<RejectReason, RejectReasonSetting>;
 }
 
@@ -41,12 +43,18 @@ export const SETTING_KEYS: SettingKey[] = [
   'defaultClaimDays',
   'supportContact',
   'memberSignup',
+  'loginSecurity',
   'rejectReasons',
 ];
 
 /** Hard limits the settings can't exceed. */
 export const UPLOAD_LIMIT_CAPS = { maxFileMb: 10, maxFiles: 10 };
 export const RETRY_LIMIT_CAPS = { maxAttempts: 20, intervalMinutes: 1440 };
+/** Allowed range for the login lock settings. */
+export const LOGIN_SECURITY_LIMITS = {
+  maxFailedAttempts: { min: 3, max: 20 },
+  lockMinutes: { min: 1, max: 1440 },
+};
 
 export const DEFAULT_REMARK = 'สะสมแต้มจากใบเสร็จ {code} · {shop}';
 
@@ -57,6 +65,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   defaultClaimDays: 30,
   supportContact: { phone: null, lineId: null },
   memberSignup: { verifyPhone: false },
+  loginSecurity: { maxFailedAttempts: 5, lockMinutes: 15 },
   rejectReasons: Object.fromEntries(
     REJECT_REASONS.map((reason, i) => [
       reason,

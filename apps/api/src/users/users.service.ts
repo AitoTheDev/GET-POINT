@@ -32,6 +32,8 @@ export interface UserView {
   status: 'ACTIVE' | 'SUSPENDED';
   mustChangePassword: boolean;
   lastLoginAt: Date | null;
+  /** Set while locked after too many wrong passwords. */
+  lockedUntil: Date | null;
   createdAt: Date;
   role: { id: string; key: string; name: string };
   scope: {
@@ -220,7 +222,11 @@ export class UsersService {
     const temporaryPassword = generateTemporaryPassword();
     const passwordHash = await hashPassword(temporaryPassword);
     await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({ where: { id }, data: { passwordHash, mustChangePassword: true } });
+      // A new password from an admin also lifts a login lock.
+      await tx.user.update({
+        where: { id },
+        data: { passwordHash, mustChangePassword: true, failedLoginCount: 0, lockedUntil: null },
+      });
       await tx.authSession.updateMany({
         where: { userId: id, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -231,6 +237,30 @@ export class UsersService {
       );
     });
     return { method, temporaryPassword };
+  }
+
+  /** Lift a login lock early (the password stays the same). */
+  async unlock(id: string, actorId: string): Promise<UserView> {
+    const user = await this.findOrThrow(id);
+    const saved = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { failedLoginCount: 0, lockedUntil: null },
+        include: userViewInclude,
+      });
+      await this.audit.log(
+        {
+          action: 'user.unlocked',
+          actorId,
+          entityType: 'user',
+          entityId: id,
+          metadata: { email: user.email, wasLockedUntil: user.lockedUntil },
+        },
+        tx,
+      );
+      return updated;
+    });
+    return toUserView(saved);
   }
 
   /** Communities with their Locations, for the "accessible locations" picker. */
@@ -340,6 +370,7 @@ export function toUserView(user: UserRecord): UserView {
     status: user.status,
     mustChangePassword: user.mustChangePassword,
     lastLoginAt: user.lastLoginAt,
+    lockedUntil: user.lockedUntil && user.lockedUntil > new Date() ? user.lockedUntil : null,
     createdAt: user.createdAt,
     role: user.role,
     scope: {

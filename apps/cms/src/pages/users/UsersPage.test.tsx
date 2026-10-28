@@ -36,6 +36,7 @@ const users: UserRow[] = [
     status: 'ACTIVE',
     mustChangePassword: false,
     lastLoginAt: null,
+    lockedUntil: null,
     createdAt: '2026-10-01T00:00:00Z',
     role: { id: 'r-admin', key: 'ADMIN', name: 'ผู้ดูแลระบบ' },
     scope: { all: true, communities: [], locations: [] },
@@ -47,6 +48,7 @@ const users: UserRow[] = [
     status: 'SUSPENDED',
     mustChangePassword: false,
     lastLoginAt: null,
+    lockedUntil: null,
     createdAt: '2026-10-02T00:00:00Z',
     role: { id: 'r-staff', key: 'STAFF', name: 'เจ้าหน้าที่' },
     scope: {

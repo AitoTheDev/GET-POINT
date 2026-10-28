@@ -50,7 +50,11 @@ export function refreshSession(): Promise<SessionResponse | null> {
   refreshInFlight ??= (async () => {
     try {
       const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        // Release the unread body, or the connection stays busy (API responses are no-store).
+        await res.body?.cancel();
+        return null;
+      }
       const session = (await res.json()) as SessionResponse;
       accessToken = session.accessToken;
       return session;
@@ -86,7 +90,10 @@ async function sendWithRenewal(path: string, init?: RequestInit): Promise<Respon
   if (res.status !== 401 || !accessToken || path.startsWith('/auth/')) return res;
 
   const renewed = await refreshSession();
-  if (renewed) return send(path, init);
+  if (renewed) {
+    await res.body?.cancel(); // the 401 is replaced by the retry; free its connection
+    return send(path, init);
+  }
   accessToken = null;
   onSessionLost?.();
   return res;
