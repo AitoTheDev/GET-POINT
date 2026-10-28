@@ -28,4 +28,22 @@ describe('validateEnv', () => {
   it('treats an empty SMTP_HOST as not configured', () => {
     expect(validateEnv({ ...base, SMTP_HOST: '' }).SMTP_HOST).toBeUndefined();
   });
+
+  it('uses the mock LOGA by default, without credentials', () => {
+    expect(validateEnv(base).LOGA_MODE).toBe('mock');
+  });
+
+  it('requires LOGA credentials and card in live mode', () => {
+    expect(() => validateEnv({ ...base, LOGA_MODE: 'live', LOGA_USERNAME: 'a@b.c' })).toThrow(
+      /LOGA_PASSWORD[\s\S]*LOGA_CARD_ID/,
+    );
+    const env = validateEnv({
+      ...base,
+      LOGA_MODE: 'live',
+      LOGA_USERNAME: 'a@b.c',
+      LOGA_PASSWORD: 'secret',
+      LOGA_CARD_ID: '2295',
+    });
+    expect(env.LOGA_CARD_ID).toBe('2295');
+  });
 });

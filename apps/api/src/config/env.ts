@@ -42,13 +42,34 @@ const envSchema = z.object({
   SMTP_USER: optional,
   SMTP_PASS: optional,
   SMTP_FROM: z.string().default('GET POINT <no-reply@getpoint.local>'),
+
+  // ---- LOGA (points system). "mock" = built-in fake LOGA, no credentials needed ----
+  LOGA_MODE: z.enum(['mock', 'live']).default('mock'),
+  LOGA_BASE_URL: z.string().url().default('https://loga.app/api'),
+  LOGA_USERNAME: optional,
+  LOGA_PASSWORD: optional,
+  /** LOGA "uuid": any fixed device name; the login token is tied to it. */
+  LOGA_DEVICE_ID: z.string().min(1).default('GETPOINT-API'),
+  LOGA_CARD_ID: optional,
+  LOGA_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 });
+
+const LIVE_LOGA_KEYS = ['LOGA_USERNAME', 'LOGA_PASSWORD', 'LOGA_CARD_ID'] as const;
 
 export type Env = z.infer<typeof envSchema>;
 
 /** Used by ConfigModule: fail fast at boot with a readable list of bad/missing variables. */
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const result = envSchema.safeParse(raw);
+  const result = envSchema
+    .superRefine((env, ctx) => {
+      if (env.LOGA_MODE !== 'live') return;
+      for (const key of LIVE_LOGA_KEYS) {
+        if (!env[key]) {
+          ctx.addIssue({ code: 'custom', path: [key], message: 'required when LOGA_MODE=live' });
+        }
+      }
+    })
+    .safeParse(raw);
   if (!result.success) {
     const issues = result.error.issues
       .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)

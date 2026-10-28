@@ -6,7 +6,9 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env';
 import { HealthController } from './health/health.controller';
+import { LogaModule } from './loga/loga.module';
 import { MailModule } from './mail/mail.module';
+import { MembersModule } from './members/members.module';
 import { OrgModule } from './org/org.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RolesModule } from './roles/roles.module';
@@ -28,6 +30,8 @@ import { UsersModule } from './users/users.module';
     RolesModule,
     UsersModule,
     OrgModule,
+    LogaModule,
+    MembersModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -1,7 +1,8 @@
 /**
  * Idempotent seed: roles + permissions, sample Community/Locations/shops, shop categories,
  * first admin.
- * In development it also creates one Staff and one Community Manager account for testing.
+ * In development it also creates one Staff and one Community Manager account for testing,
+ * and sample members.
  *
  *   npm run db:seed
  */
@@ -97,6 +98,45 @@ async function seedOrganisation() {
   return { community, locations };
 }
 
+/**
+ * Sample members from the Members mockup (development only). The first five are already
+ * members of the mock LOGA (uids 100001-100005, see src/loga/mock-loga.client.ts); the last
+ * one is not linked yet, to try the "link to LOGA" button.
+ */
+const SAMPLE_MEMBERS = [
+  { phone: '0812341234', firstName: 'สมชาย', lastName: 'ใจดี', logaUid: '100001' },
+  { phone: '0812345678', firstName: 'สมหญิง', lastName: 'มีสุข', logaUid: '100002' },
+  { phone: '0812349012', firstName: 'วิชัย', lastName: 'รักดี', logaUid: '100003' },
+  { phone: '0812343456', firstName: 'พิมพ์ชนก', lastName: 'สุขใจ', logaUid: '100004' },
+  {
+    phone: '0812347890',
+    firstName: 'ธนพล',
+    lastName: 'แสงทอง',
+    logaUid: '100005',
+    suspended: true,
+  },
+  { phone: '0812342468', firstName: 'อรทัย', lastName: 'สดใส' },
+];
+
+async function seedMembers(communityId: string) {
+  if ((await prisma.member.count({ where: { communityId } })) > 0) return;
+  for (const [index, m] of SAMPLE_MEMBERS.entries()) {
+    await prisma.member.create({
+      data: {
+        communityId,
+        phone: m.phone,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        status: m.suspended ? 'SUSPENDED' : 'ACTIVE',
+        logaUid: m.logaUid ?? null,
+        logaLinkStatus: m.logaUid ? 'LINKED' : 'NOT_LINKED',
+        // Registered two days apart, the last one two days ago.
+        createdAt: new Date(Date.now() - (SAMPLE_MEMBERS.length - index) * 2 * 86_400_000),
+      },
+    });
+  }
+}
+
 async function upsertUser(input: {
   email: string;
   name: string;
@@ -163,6 +203,7 @@ async function main() {
         scope: [{ communityId: community.id }],
       }),
     );
+    await seedMembers(community.id);
   }
 
   console.log('Seed complete.');

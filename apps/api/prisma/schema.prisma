@@ -34,6 +34,7 @@ model Community {
 
   locations  Location[]
   userScopes UserScope[]
+  members    Member[]
 
   @@map("communities")
 }
@@ -93,6 +94,62 @@ model Shop {
   @@map("shops")
 }
 
+// ---------- Members ----------
+
+enum MemberStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum MemberChannel {
+  CMS
+  LINE
+}
+
+enum LogaLinkStatus {
+  NOT_LINKED
+  LINKED
+  ERROR
+}
+
+/// A shopper who collects points. Points balance, level and birthday live in LOGA (read live).
+model Member {
+  id          String        @id @default(uuid()) @db.Uuid
+  communityId String        @map("community_id") @db.Uuid
+  code        String        @unique @default(dbgenerated("gp_next_code('M'::text, 'member_code_seq'::regclass, 4)"))
+  /// Thai mobile, stored as 10 digits ("0812345678"). Used to find the member in LOGA.
+  phone       String
+  firstName   String        @map("first_name")
+  lastName    String?       @map("last_name")
+  status      MemberStatus  @default(ACTIVE)
+  channel     MemberChannel @default(CMS)
+  /// LINE user ID, set when the member links through LIFF.
+  lineUserId  String?       @unique @map("line_user_id")
+  /// Internal staff note; never shown to the member.
+  note        String?
+  createdById String?       @map("created_by_id") @db.Uuid
+
+  /// LOGA member ID for LINE/app members (data.card.uid).
+  logaUid        String?        @map("loga_uid")
+  /// LOGA member ID for members created by us or with a plastic card (data.card.pcard_id).
+  logaPcardId    String?        @map("loga_pcard_id")
+  logaLinkStatus LogaLinkStatus @default(NOT_LINKED) @map("loga_link_status")
+  /// Last linking error shown to staff (no secrets).
+  logaLinkError  String?        @map("loga_link_error")
+  logaCheckedAt  DateTime?      @map("loga_checked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  community Community @relation(fields: [communityId], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([communityId, phone])
+  @@index([createdAt])
+  @@index([status])
+  @@map("members")
+}
+
 // ---------- Staff users, roles and permissions ----------
 
 model Role {
@@ -145,6 +202,7 @@ model User {
   sessions    AuthSession[]
   resetTokens PasswordResetToken[]
   auditLogs   AuditLog[]
+  members     Member[]
 
   @@index([roleId])
   @@map("users")
