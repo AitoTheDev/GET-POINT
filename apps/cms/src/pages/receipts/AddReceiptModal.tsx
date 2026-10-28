@@ -3,10 +3,6 @@ import {
   formatNumber,
   formatThaiMobile,
   memberFullName,
-  memberRejectMessage,
-  RECEIPT_MAX_FILE_BYTES,
-  REJECT_REASONS,
-  RejectReasonLabel,
   type ReceiptStatus,
   ReceiptStatusLabel,
   type RejectReason,
@@ -30,6 +26,7 @@ import {
   type Receipt,
   useAddReceipt,
   useMemberOptions,
+  useReceiptConfig,
   useReceiptLocations,
   useReceiptShops,
 } from '../../api/receipts';
@@ -69,6 +66,10 @@ export function AddReceiptModal({ onClose, onAdded }: AddReceiptModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const add = useAddReceipt();
+  const config = useReceiptConfig().data;
+  const reasons = config?.rejectReasons ?? [];
+  // Settings may lower the size limit (never above 10 MB).
+  const maxFileMb = config?.uploadLimits.maxFileMb ?? 10;
 
   const memberId = Form.useWatch('memberId', form);
   const locationId = Form.useWatch('locationId', form);
@@ -84,7 +85,7 @@ export function AddReceiptModal({ onClose, onAdded }: AddReceiptModalProps) {
 
   const chooseFile = (f: File) => {
     if (!TYPES.includes(f.type)) setFileError('รองรับไฟล์ JPG, PNG และ PDF เท่านั้น');
-    else if (f.size > RECEIPT_MAX_FILE_BYTES) setFileError('ไฟล์มีขนาดเกิน 10 MB');
+    else if (f.size > maxFileMb * 1024 * 1024) setFileError(`ไฟล์มีขนาดเกิน ${maxFileMb} MB`);
     else {
       setFileError(null);
       setFile(f);
@@ -186,7 +187,9 @@ export function AddReceiptModal({ onClose, onAdded }: AddReceiptModalProps) {
                 ? `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
                 : 'คลิกหรือลากไฟล์มาวาง'}
             </p>
-            <p className="ant-upload-hint">JPG, PNG หรือ PDF ไม่เกิน 10 MB · 1 ไฟล์ต่อ 1 ใบเสร็จ</p>
+            <p className="ant-upload-hint">
+              JPG, PNG หรือ PDF ไม่เกิน {maxFileMb} MB · 1 ไฟล์ต่อ 1 ใบเสร็จ
+            </p>
           </Upload.Dragger>
         </Form.Item>
 
@@ -265,11 +268,14 @@ export function AddReceiptModal({ onClose, onAdded }: AddReceiptModalProps) {
               label="เหตุผลที่ไม่อนุมัติ"
               name="rejectReason"
               rules={[{ required: true, message: 'กรุณาเลือกเหตุผล' }]}
-              extra={rejectReason && `สมาชิกจะเห็นข้อความ: “${memberRejectMessage(rejectReason)}”`}
+              extra={
+                rejectReason &&
+                `สมาชิกจะเห็นข้อความ: “${reasons.find((r) => r.reason === rejectReason)?.memberMessage ?? ''}”`
+              }
             >
               <Select
                 placeholder="เลือกเหตุผล"
-                options={REJECT_REASONS.map((r) => ({ value: r, label: RejectReasonLabel[r] }))}
+                options={reasons.map((r) => ({ value: r.reason, label: r.label }))}
               />
             </Form.Item>
             <Form.Item

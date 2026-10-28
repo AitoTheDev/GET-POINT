@@ -58,6 +58,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         } else if (typeof raw === 'string') {
           message = raw;
         }
+        // Services may send their own list of field messages, e.g. { message, details: [...] }.
+        const rawDetails = (response as { details?: unknown }).details;
+        if (!details && Array.isArray(rawDetails)) details = rawDetails.map(String);
         const rawCode = (response as { code?: unknown }).code;
         if (typeof rawCode === 'string') code = rawCode;
       }

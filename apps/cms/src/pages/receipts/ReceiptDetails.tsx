@@ -5,12 +5,12 @@ import {
   formatThaiDateTime,
   formatThaiMobile,
   PointRuleLevelLabel,
-  TransferStatusLabel,
 } from '@getpoint/shared';
 import { Alert, Descriptions, Typography } from 'antd';
 import type { Receipt } from '../../api/receipts';
 import { dayLabel } from '../point-rules/ruleDisplay';
 import { ReceiptStatusPill } from './receiptDisplay';
+import { TransferPanel } from './TransferPanel';
 
 /** Everything known about a receipt, read-only (decided receipts and the history drawer). */
 export function ReceiptDetails({
@@ -75,10 +75,6 @@ export function ReceiptDetails({
                     '0 แต้ม (ยอดไม่ถึงเกณฑ์)'
                   ),
                 },
-                {
-                  label: 'ส่งแต้มไป LOGA',
-                  children: tx ? TransferStatusLabel[tx.transferStatus] : '-',
-                },
               ]
             : []),
           { label: 'หมายเหตุ', children: r.staffNote ?? '-' },
@@ -90,6 +86,7 @@ export function ReceiptDetails({
           },
         ]}
       />
+      {tx && <TransferPanel receipt={r} />}
     </>
   );
 }

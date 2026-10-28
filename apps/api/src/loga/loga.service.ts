@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
+  type AddPointsInput,
   LogaClient,
   type LogaCustomer,
   type LogaMemberRef,
   LogaRequestError,
   logaCuid,
 } from './loga.types';
+import { MockLogaClient } from './mock-loga.client';
 
 /** Live reads are cached briefly so paging back and forth doesn't call LOGA every time. */
 const CACHE_TTL_MS = 60_000;
@@ -44,6 +46,26 @@ export class LogaService {
       if (!again) throw err;
       return { uid: again.uid, pcardId: again.pcardId, created: false };
     }
+  }
+
+  /** Send points (see LogaClient.addPoints); the member's cached balance is dropped. */
+  async addPoints(ref: LogaMemberRef, input: Omit<AddPointsInput, 'cuid'>) {
+    const cuid = logaCuid(ref);
+    if (!cuid) throw new LogaRequestError('NOT_LINKED', 'สมาชิกยังไม่เชื่อมกับ LOGA');
+    try {
+      return await this.client.addPoints({ ...input, cuid });
+    } finally {
+      this.cache.delete(cuid);
+    }
+  }
+
+  testConnection() {
+    return this.client.testConnection();
+  }
+
+  /** The built-in mock, when LOGA_MODE=mock (its behaviour can be switched for testing). */
+  get mock(): MockLogaClient | null {
+    return this.client instanceof MockLogaClient ? this.client : null;
   }
 
   /** Read many members with at most `concurrency` LOGA calls at a time. */

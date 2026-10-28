@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   ReloadOutlined,
   SearchOutlined,
+  SendOutlined,
   ShopOutlined,
   StarFilled,
 } from '@ant-design/icons';
@@ -19,6 +20,8 @@ import {
   maskThaiMobile,
   type ReceiptStatus,
   ReceiptStatusLabel,
+  type TransferStatus,
+  TransferStatusLabel,
 } from '@getpoint/shared';
 import {
   App,
@@ -57,6 +60,7 @@ import { colors } from '../../theme';
 import { ReceiptDetails } from './ReceiptDetails';
 import { ReceiptStatusPill, ReceiptThumb } from './receiptDisplay';
 import { ReceiptViewer } from './ReceiptViewer';
+import { TransferStatusPill } from './TransferPanel';
 
 dayjs.extend(buddhistEra);
 
@@ -65,6 +69,7 @@ interface Draft {
   locationId?: string;
   shopId?: string;
   status?: ReceiptStatus;
+  transferStatus?: TransferStatus;
   range: [Dayjs, Dayjs] | null;
 }
 const EMPTY: Draft = { search: '', range: null };
@@ -89,6 +94,7 @@ export function HistoryPage() {
       locationId: d.locationId,
       shopId: d.shopId,
       status: d.status,
+      transferStatus: d.transferStatus,
       submittedFrom: d.range?.[0].format('YYYY-MM-DD'),
       submittedTo: d.range?.[1].format('YYYY-MM-DD'),
     }));
@@ -223,6 +229,20 @@ export function HistoryPage() {
             )}
             style={{ flex: '1 1 160px' }}
           />
+          <Select<TransferStatus>
+            size="large"
+            aria-label="กรองตามการส่งแต้ม"
+            allowClear
+            placeholder="ทุกสถานะการส่งแต้ม"
+            suffixIcon={<SendOutlined />}
+            value={draft.transferStatus}
+            onChange={(transferStatus) => setDraft((d) => ({ ...d, transferStatus }))}
+            options={(['PENDING', 'SUCCEEDED', 'FAILED', 'UNKNOWN'] as const).map((v) => ({
+              value: v,
+              label: TransferStatusLabel[v],
+            }))}
+            style={{ flex: '1 1 180px' }}
+          />
           <DatePicker.RangePicker
             size="large"
             aria-label="วันที่ส่ง"
@@ -336,6 +356,11 @@ export function HistoryPage() {
               sorter: true,
               sortOrder: sortOrder('status'),
               render: (_, r) => <ReceiptStatusPill status={r.status} />,
+            },
+            {
+              title: 'ส่งแต้มไป LOGA',
+              render: (_, r) =>
+                r.transaction ? <TransferStatusPill status={r.transaction.transferStatus} /> : '-',
             },
             {
               title: 'จัดการ',

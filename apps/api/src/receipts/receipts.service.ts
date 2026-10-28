@@ -6,11 +6,11 @@ import {
   formatThaiMobile,
   formatThaiShortDate,
   memberFullName,
-  memberRejectMessage,
   normalizeReceiptNo,
   type PointCalculation,
   ReceiptStatusLabel,
-  RejectReasonLabel,
+  orderedRejectReasons,
+  type RejectReasonSetting,
   TransferStatusLabel,
 } from '@getpoint/shared';
 import {
@@ -27,6 +27,8 @@ import { communityWhere, locationWhere, type Scope } from '../auth/scope';
 import { bangkokDay, bangkokDayEnd, bangkokDayStart } from '../common/bangkok-time';
 import { PointRulesService } from '../point-rules/point-rules.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
+import { TransferService } from '../transfers/transfer.service';
 import type {
   CreateReceiptDto,
   ListReceiptsQuery,
@@ -53,7 +55,22 @@ const receiptInclude = {
   location: { select: { id: true, code: true, name: true, communityId: true } },
   shop: { select: { id: true, code: true, name: true, participating: true, status: true } },
   submission: { select: { id: true, createdAt: true, _count: { select: { receipts: true } } } },
-  transaction: { select: { points: true, transferStatus: true, rule: true, calculation: true } },
+  transaction: {
+    select: {
+      id: true,
+      points: true,
+      transferStatus: true,
+      rule: true,
+      calculation: true,
+      remark: true,
+      attempts: true,
+      lastAttemptAt: true,
+      nextAttemptAt: true,
+      lastError: true,
+      sentAt: true,
+      pointsAfter: true,
+    },
+  },
   reviewedBy: { select: { id: true, name: true } },
 } satisfies Prisma.ReceiptInclude;
 
@@ -83,16 +100,19 @@ function receiptScope(scope: Scope): Prisma.ReceiptWhereInput {
 }
 
 /** API shape: no file path, numbers instead of Decimals, calendar days as strings. */
-function toReceipt({ imagePath: _, fingerprint: __, submission, ...r }: ReceiptRow) {
+function toReceipt(
+  { imagePath: _, fingerprint: __, submission, ...r }: ReceiptRow,
+  reasons: Record<RejectReason, RejectReasonSetting>,
+) {
   return {
     ...r,
     amount: r.amount?.toNumber() ?? null,
     receiptDate: r.receiptDate ? toDay(r.receiptDate) : null,
     member: { ...r.member, name: memberFullName(r.member) },
     submission: { id: submission.id, count: submission._count.receipts },
-    rejectLabel: r.rejectReason ? RejectReasonLabel[r.rejectReason] : null,
+    rejectLabel: r.rejectReason ? reasons[r.rejectReason].label : null,
     /** What the member will see in LINE. */
-    memberMessage: r.rejectReason ? memberRejectMessage(r.rejectReason) : null,
+    memberMessage: r.rejectReason ? reasons[r.rejectReason].memberMessage : null,
   };
 }
 
@@ -128,7 +148,22 @@ export class ReceiptsService {
     private readonly audit: AuditService,
     private readonly rules: PointRulesService,
     private readonly storage: ReceiptStorageService,
+    private readonly settings: SettingsService,
+    private readonly transfers: TransferService,
   ) {}
+
+  private reasons() {
+    return this.settings.get('rejectReasons');
+  }
+
+  /** What the review and add-receipt screens need: reject reasons and upload limits. */
+  async config() {
+    const values = await this.settings.all();
+    return {
+      rejectReasons: orderedRejectReasons(values.rejectReasons),
+      uploadLimits: values.uploadLimits,
+    };
+  }
 
   /**
    * Store a member's submission: 1–10 files (JPG/PNG/PDF, ≤10 MB), one receipt per file.
@@ -144,7 +179,7 @@ export class ReceiptsService {
   ) {
     let checked;
     try {
-      checked = checkSubmission(files);
+      checked = checkSubmission(files, await this.settings.get('uploadLimits'));
     } catch (err) {
       if (err instanceof ReceiptFileError) throw new BadRequestException(err.message);
       throw err;
@@ -234,11 +269,17 @@ export class ReceiptsService {
         take: query.pageSize,
       }),
     ]);
-    return { items: rows.map(toReceipt), total, page: query.page, pageSize: query.pageSize };
+    const reasons = await this.reasons();
+    return {
+      items: rows.map((r) => toReceipt(r, reasons)),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   }
 
   async get(id: string, user: RequestUser) {
-    return toReceipt(await this.findAccessible(id, user));
+    return toReceipt(await this.findAccessible(id, user), await this.reasons());
   }
 
   /** The receipt file, after checking the user may see the receipt. */
@@ -268,12 +309,15 @@ export class ReceiptsService {
       { status: 'NEEDS_CHECK', ...fieldColumns(dto), staffNote: dto.staffNote },
       { note: dto.staffNote },
     );
-    return toReceipt(saved);
+    return toReceipt(saved, await this.reasons());
   }
 
   async reject(id: string, dto: RejectDto, user: RequestUser) {
     if (dto.reason === 'OTHER' && !dto.note) {
       throw new BadRequestException('กรุณาระบุเหตุผลเมื่อเลือก "อื่นๆ"');
+    }
+    if (!(await this.reasons())[dto.reason].enabled) {
+      throw new BadRequestException('เหตุผลนี้ถูกปิดใช้งานในหน้าตั้งค่า');
     }
     const receipt = await this.findAccessible(id, user);
     if (dto.locationId) await this.assertPlace(receipt, dto.locationId, dto.shopId, user);
@@ -291,7 +335,7 @@ export class ReceiptsService {
       },
       { reason: dto.reason },
     );
-    return toReceipt(saved);
+    return toReceipt(saved, await this.reasons());
   }
 
   /** Members to pick when adding a receipt by hand (active, within the user's scope). */
@@ -480,6 +524,8 @@ export class ReceiptsService {
               calculation: { exact: calculation.exact, capped: calculation.capped },
               reference: receipt.code,
               createdById: user.id,
+              // Due now: sent right after this commits (or by the next scheduled run).
+              nextAttemptAt: new Date(),
             },
           });
         }
@@ -509,7 +555,28 @@ export class ReceiptsService {
         }
         throw err;
       });
-    return toReceipt(saved);
+    // Points go to LOGA after the approval is safely stored, never inside its transaction.
+    if (saved.transaction) this.transfers.queue(saved.transaction.id);
+    return toReceipt(saved, await this.reasons());
+  }
+
+  /** Staff retry of a transfer that failed or has an unknown outcome. */
+  async retryTransfer(id: string, user: RequestUser) {
+    const receipt = await this.findAccessible(id, user);
+    if (!receipt.transaction) throw new NotFoundException('ใบเสร็จนี้ไม่มีแต้มที่ต้องส่ง');
+    await this.transfers.send(receipt.transaction.id, { manualBy: user.id });
+    return this.get(id, user);
+  }
+
+  /** Every attempt at sending this receipt's points, newest first. */
+  async transferAttempts(id: string, user: RequestUser) {
+    const receipt = await this.findAccessible(id, user);
+    if (!receipt.transaction) return [];
+    return this.prisma.pointTransferAttempt.findMany({
+      where: { transactionId: receipt.transaction.id },
+      include: { triggeredBy: { select: { id: true, name: true } } },
+      orderBy: { attempt: 'desc' },
+    });
   }
 
   /** Excel of the receipts matching the history filters. */
@@ -526,6 +593,7 @@ export class ReceiptsService {
       include: receiptInclude,
       orderBy: orderBy(query),
     });
+    const reasons = await this.reasons();
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'GET POINT CMS';
@@ -564,7 +632,7 @@ export class ReceiptsService {
         points: r.transaction?.points ?? (r.status === 'APPROVED' ? 0 : null),
         status: ReceiptStatusLabel[r.status],
         reason: r.rejectReason
-          ? RejectReasonLabel[r.rejectReason] + (r.rejectNote ? `: ${r.rejectNote}` : '')
+          ? reasons[r.rejectReason].label + (r.rejectNote ? `: ${r.rejectNote}` : '')
           : '',
         transfer: r.transaction ? TransferStatusLabel[r.transaction.transferStatus] : '',
         reviewer: r.reviewedBy?.name ?? '',
@@ -780,6 +848,7 @@ export class ReceiptsService {
     const and: Prisma.ReceiptWhereInput[] = [
       receiptScope(user.scope),
       { status: query.status, locationId: query.locationId, shopId: query.shopId },
+      ...(query.transferStatus ? [{ transaction: { transferStatus: query.transferStatus } }] : []),
     ];
     if (query.submittedFrom || query.submittedTo) {
       and.push({

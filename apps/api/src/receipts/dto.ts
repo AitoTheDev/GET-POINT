@@ -149,6 +149,11 @@ export class ListReceiptsQuery {
   @IsIn(STATUSES)
   status?: Status;
 
+  /** Points sending status (approved receipts with points). */
+  @IsOptional()
+  @IsIn(['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'UNKNOWN'])
+  transferStatus?: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'UNKNOWN';
+
   /** Receipt code (GP001), phone or receipt number. */
   @IsOptional()
   @Transform(trim)

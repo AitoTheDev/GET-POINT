@@ -53,6 +53,13 @@ export class ReceiptsController {
     return this.receipts.shops(query.locationId, user);
   }
 
+  /** Reject reasons (wording from Settings) and upload limits, for the review screens. */
+  @RequirePermission(VIEW, 'view')
+  @Get('config')
+  config() {
+    return this.receipts.config();
+  }
+
   /** Members to choose from when adding a receipt by hand. */
   @RequirePermission(Menu.RECEIPT_REVIEW, 'manage')
   @Get('members')
@@ -120,6 +127,21 @@ export class ReceiptsController {
       'X-Content-Type-Options': 'nosniff',
     });
     file.stream.pipe(res);
+  }
+
+  /** Attempts at sending this receipt's points to LOGA. */
+  @RequirePermission(VIEW, 'view')
+  @Get(':id/transfer')
+  transfer(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
+    return this.receipts.transferAttempts(id, user);
+  }
+
+  /** Send the points again now (after a failure or an unknown outcome). */
+  @RequirePermission(Menu.RECEIPT_REVIEW, 'manage')
+  @Post(':id/transfer/retry')
+  @HttpCode(200)
+  retryTransfer(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
+    return this.receipts.retryTransfer(id, user);
   }
 
   /** Live check while staff type: rule, points, duplicates, problems. */

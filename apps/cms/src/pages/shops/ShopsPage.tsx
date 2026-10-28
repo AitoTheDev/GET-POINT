@@ -3,7 +3,6 @@ import {
   FileExcelOutlined,
   PlusOutlined,
   ShopOutlined,
-  TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
 import { Menu } from '@getpoint/shared';
@@ -14,7 +13,6 @@ import { type Location, useCommunities, useLocations, useOrgSummary } from '../.
 import { useAuth } from '../../auth/useAuth';
 import { PageHeader } from '../../components/PageHeader';
 import { StatCard } from '../../components/StatCard';
-import { CategoriesModal } from './CategoriesModal';
 import { CommunitiesModal } from './CommunitiesModal';
 import { LocationList } from './LocationList';
 import { LocationModal } from './LocationModal';
@@ -32,7 +30,6 @@ export function ShopsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locationModal, setLocationModal] = useState<Location | 'new' | null>(null);
   const [communitiesOpen, setCommunitiesOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const summary = useOrgSummary();
@@ -63,11 +60,6 @@ export function ShopsPage() {
         title="ร้านค้าและสถานที่"
         extra={
           <Flex gap={12} wrap>
-            {can(Menu.SETTINGS, 'manage') && (
-              <Button size="large" icon={<TagsOutlined />} onClick={() => setCategoriesOpen(true)}>
-                หมวดหมู่ร้านค้า
-              </Button>
-            )}
             <Button
               size="large"
               icon={<FileExcelOutlined />}
@@ -164,9 +156,6 @@ export function ShopsPage() {
         />
       )}
       <CommunitiesModal open={communitiesOpen} onClose={() => setCommunitiesOpen(false)} />
-      {can(Menu.SETTINGS, 'manage') && (
-        <CategoriesModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
-      )}
     </>
   );
 }

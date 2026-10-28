@@ -57,6 +57,8 @@ export interface RuleVersion {
 export interface RuleOptions {
   communities: (Ref & { status: ActiveStatus; canManage: boolean })[];
   locations: (Ref & { status: ActiveStatus; communityId: string })[];
+  /** Pre-filled "send within N days" for a new rule (Settings); null = no limit. */
+  defaultClaimDays: number | null;
 }
 
 export interface RuleShop extends Ref {

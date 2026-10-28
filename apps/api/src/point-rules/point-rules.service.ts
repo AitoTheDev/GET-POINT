@@ -1,6 +1,5 @@
 import {
   calculatePoints,
-  DEFAULT_CLAIM_DAYS,
   formatRate,
   type PointRuleLevel,
   type RoundingMode,
@@ -17,6 +16,7 @@ import { AuditService } from '../audit/audit.service';
 import type { RequestUser } from '../auth/auth-user';
 import { communityWhere, hasWholeCommunity, locationWhere, type Scope } from '../auth/scope';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import type {
   CreatePointRuleDto,
   ListPointRulesQuery,
@@ -121,6 +121,7 @@ export class PointRulesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly settings: SettingsService,
   ) {}
 
   /** Communities and Locations for the form; `canManage` = rules can be added there. */
@@ -141,6 +142,8 @@ export class PointRulesService {
     return {
       communities: communities.map((c) => ({ ...c, canManage: hasWholeCommunity(scope, c.id) })),
       locations,
+      /** Pre-filled "send within N days" for a new rule (Settings). */
+      defaultClaimDays: await this.settings.get('defaultClaimDays'),
     };
   }
 
@@ -206,7 +209,8 @@ export class PointRulesService {
       points: dto.points,
       rounding: dto.rounding,
       maxPoints: dto.maxPoints ?? null,
-      claimDays: dto.claimDays !== undefined ? dto.claimDays : DEFAULT_CLAIM_DAYS,
+      claimDays:
+        dto.claimDays !== undefined ? dto.claimDays : await this.settings.get('defaultClaimDays'),
       startDate: dto.startDate,
       endDate: dto.endDate ?? null,
       status: dto.status ?? 'ACTIVE',

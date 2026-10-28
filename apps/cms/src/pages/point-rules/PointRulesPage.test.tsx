@@ -15,6 +15,7 @@ const options: RuleOptions = {
     { id: 'l1', code: 'LOC001', name: 'Community Mall A', status: 'ACTIVE', communityId: 'c1' },
     { id: 'l2', code: 'LOC002', name: 'Community Mall B', status: 'ACTIVE', communityId: 'c1' },
   ],
+  defaultClaimDays: 30,
 };
 const shops: RuleShop[] = [
   { id: 's1', code: 'S001', name: 'ร้านกาแฟ A', participating: true, status: 'ACTIVE' },

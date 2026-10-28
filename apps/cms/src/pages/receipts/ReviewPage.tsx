@@ -30,6 +30,7 @@ import { errorMessage } from '../../api/client';
 import {
   type Receipt,
   type ReceiptFilters,
+  useReceiptConfig,
   useReceiptLocations,
   useReceipts,
   useReceiptSummary,
@@ -62,6 +63,8 @@ export function ReviewPage() {
   const [searchText, setSearchText] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const summary = useReceiptSummary();
+  // Load reject reasons and upload limits now, so the dialogs open with them ready.
+  useReceiptConfig();
   const locations = useReceiptLocations();
   const list = useReceipts(filters);
 

@@ -28,6 +28,17 @@ describe('HttpExceptionFilter', () => {
     expect(body.details).toBeUndefined();
   });
 
+  it('passes a service’s own list of details through', () => {
+    const body = filter.toBody(
+      new BadRequestException({ message: 'ข้อมูลไม่ถูกต้อง', details: ['ขนาดไฟล์ต้องไม่เกิน 10'] }),
+      '/api/x',
+    );
+    expect(body).toMatchObject({
+      message: 'ข้อมูลไม่ถูกต้อง',
+      details: ['ขนาดไฟล์ต้องไม่เกิน 10'],
+    });
+  });
+
   it('turns validation messages into details', () => {
     const body = filter.toBody(
       new BadRequestException(['phone must be 10 digits', 'amount must be positive']),

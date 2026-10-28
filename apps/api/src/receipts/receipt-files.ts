@@ -27,10 +27,12 @@ export function detectType(buffer: Buffer) {
 export class ReceiptFileError extends Error {}
 
 /** Check one upload: JPG, PNG or PDF, at most 10 MB. */
-export function checkFile(buffer: Buffer, name = 'ไฟล์'): CheckedFile {
+export function checkFile(buffer: Buffer, name = 'ไฟล์', maxFileMb = 10): CheckedFile {
   if (buffer.length === 0) throw new ReceiptFileError(`${name} ว่างเปล่า`);
-  if (buffer.length > RECEIPT_MAX_FILE_BYTES) {
-    throw new ReceiptFileError(`${name} มีขนาดเกิน 10 MB`);
+  // Settings may lower the limit, never raise it above 10 MB.
+  const maxBytes = Math.min(maxFileMb * 1024 * 1024, RECEIPT_MAX_FILE_BYTES);
+  if (buffer.length > maxBytes) {
+    throw new ReceiptFileError(`${name} มีขนาดเกิน ${maxBytes / 1024 / 1024} MB`);
   }
   const type = detectType(buffer);
   if (!type) throw new ReceiptFileError(`${name} ต้องเป็นไฟล์ JPG, PNG หรือ PDF`);
@@ -44,10 +46,14 @@ export function checkFile(buffer: Buffer, name = 'ไฟล์'): CheckedFile {
 }
 
 /** Check a whole submission: 1–10 files, each valid. */
-export function checkSubmission(buffers: Buffer[]): CheckedFile[] {
+export function checkSubmission(
+  buffers: Buffer[],
+  limits: { maxFileMb: number; maxFiles: number } = { maxFileMb: 10, maxFiles: RECEIPT_MAX_FILES },
+): CheckedFile[] {
+  const maxFiles = Math.min(limits.maxFiles, RECEIPT_MAX_FILES);
   if (buffers.length === 0) throw new ReceiptFileError('กรุณาเพิ่มใบเสร็จอย่างน้อย 1 ใบ');
-  if (buffers.length > RECEIPT_MAX_FILES) {
-    throw new ReceiptFileError(`ส่งได้ครั้งละไม่เกิน ${RECEIPT_MAX_FILES} ใบ`);
+  if (buffers.length > maxFiles) {
+    throw new ReceiptFileError(`ส่งได้ครั้งละไม่เกิน ${maxFiles} ใบ`);
   }
-  return buffers.map((b, i) => checkFile(b, `ใบเสร็จที่ ${i + 1}`));
+  return buffers.map((b, i) => checkFile(b, `ใบเสร็จที่ ${i + 1}`, limits.maxFileMb));
 }

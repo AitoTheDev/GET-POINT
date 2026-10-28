@@ -22,15 +22,18 @@ export interface RuleFormValues {
   active: boolean;
 }
 
-/** Defaults for a new rule: the mockup's 25 baht = 1 point, round down, starting today. */
-export const newRule = (): RuleFormValues => ({
+/**
+ * Defaults for a new rule: the mockup's 25 baht = 1 point, round down, starting today, and
+ * the receipt age limit set on the Settings page.
+ */
+export const newRule = (defaultClaimDays: number | null = DEFAULT_CLAIM_DAYS): RuleFormValues => ({
   shopId: '',
   spendAmount: 25,
   points: 1,
   rounding: 'FLOOR',
   capEnabled: false,
-  claimDays: DEFAULT_CLAIM_DAYS,
-  noClaimLimit: false,
+  claimDays: defaultClaimDays ?? DEFAULT_CLAIM_DAYS,
+  noClaimLimit: defaultClaimDays === null,
   startDate: dayjs(todayInBangkok()),
   noEnd: true,
   active: true,

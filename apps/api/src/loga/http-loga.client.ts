@@ -1,6 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
+  type AddPointsInput,
+  type AddPointsResult,
   LogaClient,
   type LogaCustomer,
   type LogaMemberRef,
@@ -68,6 +70,27 @@ export class HttpLogaClient extends LogaClient {
     return { uid: null, pcardId };
   }
 
+  async addPoints(input: AddPointsInput): Promise<AddPointsResult> {
+    // `point` is sent, so LOGA uses our calculated points (no formula_id); `cost` is info only.
+    const res = await this.call('points/add_customer_point', {
+      cuid: input.cuid,
+      point: String(input.points),
+      cost: input.cost.toFixed(2),
+      remark: input.remark,
+      reference: input.reference,
+    });
+    if (!isOk(res)) throw new LogaRequestError(String(res.code), res.msg ?? '');
+    const now = Number(get(res.data, 'point.now'));
+    return { pointsNow: Number.isFinite(now) ? now : null };
+  }
+
+  async testConnection() {
+    this.token = null; // log in again so a wrong password shows up now
+    const res = await this.call('main/get_card_detail', {});
+    if (!isOk(res)) throw new LogaRequestError(String(res.code), res.msg ?? '');
+    return { cardName: str(get(res.data, 'name')) };
+  }
+
   /** Get customer info; `cuid` may be a uid, "P" + pcard_id or a phone number. */
   private async customerInfo(cuid: string): Promise<LogaCustomer | null> {
     const res = await this.call('main/get_customer_info', { cuid });
@@ -88,7 +111,13 @@ export class HttpLogaClient extends LogaClient {
   }
 
   private async auth() {
-    this.token ??= await this.login();
+    try {
+      this.token ??= await this.login();
+    } catch (err) {
+      // Even a login timeout means the actual request was never sent.
+      if (err instanceof LogaUnavailableError) throw new LogaUnavailableError(err.message, false);
+      throw err;
+    }
     return { token: this.token, uuid: this.config.deviceId, card_id: this.config.cardId };
   }
 
@@ -118,22 +147,32 @@ export class HttpLogaClient extends LogaClient {
       });
     } catch (err) {
       this.logger.warn(`${path}: ${err instanceof Error ? err.message : String(err)}`);
-      throw new LogaUnavailableError();
+      throw new LogaUnavailableError(undefined, !neverArrived(err));
     }
     if (!response.ok) {
       this.logger.warn(`${path}: HTTP ${response.status}`);
-      throw new LogaUnavailableError();
+      // A server error may come after the work was done.
+      throw new LogaUnavailableError(undefined, response.status >= 500);
     }
     const body = (await response.json().catch(() => null)) as LogaResponse | null;
     if (!body || typeof body !== 'object' || !('code' in body)) {
       this.logger.warn(`${path}: response is not LOGA JSON`);
-      throw new LogaUnavailableError();
+      throw new LogaUnavailableError(undefined, true);
     }
     return body;
   }
 }
 
 const isOk = (res: LogaResponse) => String(res.code) === '200';
+
+/** Network errors that mean the request never reached LOGA (safe to treat as "not sent"). */
+const NEVER_ARRIVED = ['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH'];
+
+function neverArrived(err: unknown): boolean {
+  const cause = (err as { cause?: { code?: string } })?.cause;
+  const code = cause?.code ?? (err as { code?: string })?.code;
+  return Boolean(code && NEVER_ARRIVED.includes(code));
+}
 
 const isTokenProblem = (res: LogaResponse) =>
   ['401', '403'].includes(String(res.code)) || /token|login|auth/i.test(res.msg ?? '');

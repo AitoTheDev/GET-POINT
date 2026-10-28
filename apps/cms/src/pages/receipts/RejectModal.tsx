@@ -1,13 +1,13 @@
-import {
-  REJECT_REASONS,
-  RejectReasonLabel,
-  type RejectReason,
-  memberRejectMessage,
-} from '@getpoint/shared';
+import type { RejectReason } from '@getpoint/shared';
 import { Alert, Form, Input, Modal, Radio, Space, Typography } from 'antd';
 import { useState } from 'react';
 import { errorMessage } from '../../api/client';
-import { type Receipt, type ReceiptFields, useRejectReceipt } from '../../api/receipts';
+import {
+  type Receipt,
+  type ReceiptFields,
+  useReceiptConfig,
+  useRejectReceipt,
+} from '../../api/receipts';
 
 interface RejectModalProps {
   receipt: Receipt;
@@ -22,13 +22,17 @@ interface RejectModalProps {
 /** "ปฏิเสธ": pick one of the nine reasons; "อื่นๆ" needs a note (kept internal). */
 export function RejectModal({ receipt, suggested, fields, onClose, onDone }: RejectModalProps) {
   const reject = useRejectReceipt();
+  // Wording, order and which reasons are on come from Settings.
+  const reasons = useReceiptConfig().data?.rejectReasons ?? [];
   const [reason, setReason] = useState<RejectReason | undefined>(suggested);
+  const chosen = reasons.find((r) => r.reason === reason);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const needsNote = reason === 'OTHER';
 
   const submit = async () => {
-    if (!reason) return setError('กรุณาเลือกเหตุผล');
+    // A suggested reason that is switched off in Settings counts as not chosen.
+    if (!reason || !chosen) return setError('กรุณาเลือกเหตุผล');
     if (needsNote && !note.trim()) return setError('กรุณาระบุเหตุผลเมื่อเลือก "อื่นๆ"');
     setError(null);
     try {
@@ -54,11 +58,11 @@ export function RejectModal({ receipt, suggested, fields, onClose, onDone }: Rej
       {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 12 }} />}
       <Form layout="vertical">
         <Form.Item label="เหตุผล" required>
-          <Radio.Group value={reason} onChange={(e) => setReason(e.target.value)}>
+          <Radio.Group value={chosen?.reason} onChange={(e) => setReason(e.target.value)}>
             <Space direction="vertical">
-              {REJECT_REASONS.map((r) => (
-                <Radio key={r} value={r}>
-                  {RejectReasonLabel[r]}
+              {reasons.map((r) => (
+                <Radio key={r.reason} value={r.reason}>
+                  {r.label}
                 </Radio>
               ))}
             </Space>
@@ -79,7 +83,7 @@ export function RejectModal({ receipt, suggested, fields, onClose, onDone }: Rej
         </Form.Item>
         {reason && (
           <Typography.Text type="secondary">
-            สมาชิกจะเห็นข้อความ: “{memberRejectMessage(reason)}”
+            สมาชิกจะเห็นข้อความ: “{chosen?.memberMessage}”
           </Typography.Text>
         )}
       </Form>

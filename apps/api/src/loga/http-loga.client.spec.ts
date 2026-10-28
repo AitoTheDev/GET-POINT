@@ -140,6 +140,80 @@ describe('HttpLogaClient', () => {
   });
 });
 
+describe('HttpLogaClient.addPoints', () => {
+  const input = { cuid: 'P770788', points: 27, cost: 680, remark: 'สะสมแต้ม', reference: 'GP001' };
+  const refused = Object.assign(new TypeError('fetch failed'), {
+    cause: { code: 'ECONNREFUSED' },
+  });
+  const timedOut = Object.assign(new Error('The operation was aborted due to timeout'), {
+    name: 'TimeoutError',
+  });
+
+  it('sends our points (no formula) with the receipt code as reference', async () => {
+    const { client, calls } = fakeLoga({
+      'main/login': [loginOk()],
+      'points/add_customer_point': [
+        { body: { code: 200, msg: 'ok', data: { point: { now: '547' } } } },
+      ],
+    });
+    await expect(client.addPoints(input)).resolves.toEqual({ pointsNow: 547 });
+    expect(calls[1].form).toEqual({
+      cuid: 'P770788',
+      point: '27',
+      cost: '680.00',
+      remark: 'สะสมแต้ม',
+      reference: 'GP001',
+      token: 'tok-1',
+      uuid: 'TEST-DEVICE',
+      card_id: '195',
+    });
+  });
+
+  it('reports a LOGA error answer as a request error (nothing was added)', async () => {
+    const { client } = fakeLoga({
+      'main/login': [loginOk()],
+      'points/add_customer_point': [{ body: { code: 400, msg: 'no member' } }],
+    });
+    await expect(client.addPoints(input)).rejects.toBeInstanceOf(LogaRequestError);
+  });
+
+  it.each<[string, Reply, boolean]>([
+    ['connection refused', refused, false],
+    ['timeout', timedOut, true],
+    ['HTTP 502', { status: 502, body: {} }, true],
+    ['HTTP 404', { status: 404, body: {} }, false],
+    ['a reply that is not LOGA JSON', { body: 'oops' }, true],
+  ])('on %s: maybe processed = %s', async (_, reply, maybe) => {
+    const { client } = fakeLoga({
+      'main/login': [loginOk()],
+      'points/add_customer_point': [reply],
+    });
+    const err = await client.addPoints(input).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LogaUnavailableError);
+    expect((err as LogaUnavailableError).maybeProcessed).toBe(maybe);
+  });
+
+  it('counts a login timeout as "not sent": the points request never went out', async () => {
+    const { client, calls } = fakeLoga({ 'main/login': [timedOut] });
+    const err = (await client.addPoints(input).catch((e: unknown) => e)) as LogaUnavailableError;
+    expect(err.maybeProcessed).toBe(false);
+    expect(calls.map((c) => c.path)).toEqual(['main/login']);
+  });
+
+  it('tests the connection by logging in again and reading the card', async () => {
+    const { client, calls } = fakeLoga({
+      'main/login': [loginOk('a'), loginOk('b')],
+      'main/get_card_detail': [
+        { body: { code: 200, data: { name: 'GET POINT' } } },
+        { body: { code: 200, data: { name: 'GET POINT' } } },
+      ],
+    });
+    await expect(client.testConnection()).resolves.toEqual({ cardName: 'GET POINT' });
+    await client.testConnection();
+    expect(calls.filter((c) => c.path === 'main/login')).toHaveLength(2);
+  });
+});
+
 describe('parseCustomer', () => {
   it('reads the documented member IDs plus points, name and level', () => {
     expect(

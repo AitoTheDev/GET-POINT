@@ -51,6 +51,25 @@ describe('LogaService (with the mock LOGA)', () => {
     expect(find).toHaveBeenCalledTimes(2);
   });
 
+  it('mock LOGA: adds points once per reference, and acts out failures', async () => {
+    const add = (reference: string) =>
+      client.addPoints({ cuid: '100001', points: 10, cost: 250, remark: 'x', reference });
+    await expect(add('GP001')).resolves.toEqual({ pointsNow: 530 });
+    await expect(add('GP001')).resolves.toEqual({ pointsNow: 530 }); // repeat: not added twice
+
+    client.transferMode = 'FAIL';
+    await expect(add('GP002')).rejects.toThrow('จำลอง');
+    client.transferMode = 'TIMEOUT';
+    await expect(add('GP002')).rejects.toMatchObject({ maybeProcessed: true });
+    expect(client.pointsFor('GP002')).toBeNull(); // nothing was added
+
+    client.transferMode = 'LOST_RESPONSE';
+    await expect(add('GP003')).rejects.toMatchObject({ maybeProcessed: true });
+    expect(client.pointsFor('GP003')).toBe(10); // added, though the reply was lost
+    client.transferMode = 'SUCCESS';
+    await expect(add('GP003')).resolves.toEqual({ pointsNow: 540 }); // resend is safe
+  });
+
   it('passes LOGA outages through', async () => {
     await expect(service.findOrCreate(MOCK_LOGA_DOWN_PHONE, 'x')).rejects.toBeInstanceOf(
       LogaUnavailableError,

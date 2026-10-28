@@ -5,6 +5,7 @@ import type {
   PointRuleLevel,
   ReceiptStatus,
   RejectReason,
+  RejectReasonSetting,
   RoundingMode,
   TransferStatus,
 } from '@getpoint/shared';
@@ -60,11 +61,37 @@ export interface Receipt {
   reviewedBy: { id: string; name: string } | null;
   reviewedAt: string | null;
   transaction: {
+    id: string;
     points: number;
     transferStatus: TransferStatus;
     rule: { spendAmount: number; points: number; place: string | null; level: PointRuleLevel };
     calculation: { exact: number; capped: boolean };
+    /** Text the member sees in LOGA. */
+    remark: string | null;
+    attempts: number;
+    lastAttemptAt: string | null;
+    /** Next automatic try; null = none planned (sent, or waiting for a staff retry). */
+    nextAttemptAt: string | null;
+    lastError: string | null;
+    sentAt: string | null;
+    /** Member's LOGA balance just after the points were added. */
+    pointsAfter: number | null;
   } | null;
+}
+
+export interface TransferAttempt {
+  id: string;
+  attempt: number;
+  result: TransferStatus;
+  error: string | null;
+  durationMs: number;
+  triggeredBy: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+export interface ReceiptConfig {
+  rejectReasons: (RejectReasonSetting & { reason: RejectReason })[];
+  uploadLimits: { maxFileMb: number; maxFiles: number };
 }
 
 export interface ReceiptSummary {
@@ -103,6 +130,7 @@ export interface CheckResult {
 
 export interface ReceiptFilters {
   status?: ReceiptStatus;
+  transferStatus?: TransferStatus;
   search?: string;
   locationId?: string;
   shopId?: string;
@@ -141,11 +169,17 @@ export const useReceiptSummary = (enabled = true) =>
     refetchInterval: 60_000,
   });
 
+/** Points are sent to LOGA in the background: refresh while any shown send is under way. */
+const SENDING_POLL_MS = 3000;
+const isSending = (r: Receipt) =>
+  r.transaction?.transferStatus === 'PENDING' || r.transaction?.transferStatus === 'PROCESSING';
+
 export const useReceipts = (filters: ReceiptFilters) =>
   useQuery({
     queryKey: ['receipts', 'list', filters],
     queryFn: () => apiGet<Paginated<Receipt>>(`/receipts?${toQuery(filters)}`),
     placeholderData: keepPreviousData,
+    refetchInterval: (q) => (q.state.data?.items.some(isSending) ? SENDING_POLL_MS : false),
   });
 
 export const useReceipt = (id: string | null) =>
@@ -153,6 +187,22 @@ export const useReceipt = (id: string | null) =>
     queryKey: ['receipts', 'detail', id],
     queryFn: () => apiGet<Receipt>(`/receipts/${id}`),
     enabled: Boolean(id),
+    refetchInterval: (q) => (q.state.data && isSending(q.state.data) ? SENDING_POLL_MS : false),
+  });
+
+/** Reject reasons (wording from Settings) and upload limits. */
+export const useReceiptConfig = () =>
+  useQuery({
+    queryKey: ['receipts', 'config'],
+    queryFn: () => apiGet<ReceiptConfig>('/receipts/config'),
+    staleTime: 60_000,
+  });
+
+export const useTransferAttempts = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['receipts', 'transfer', id],
+    queryFn: () => apiGet<TransferAttempt[]>(`/receipts/${id}/transfer`),
+    enabled,
   });
 
 export const useReceiptLocations = () =>
@@ -304,3 +354,7 @@ export const useNeedsCheck = () =>
   useReceiptMutation(({ id, ...body }: ReceiptFields & { id: string; staffNote: string }) =>
     apiSend<Receipt>('POST', `/receipts/${id}/needs-check`, body),
   );
+
+/** Send the points to LOGA again now (staff retry). */
+export const useRetryTransfer = () =>
+  useReceiptMutation((id: string) => apiSend<Receipt>('POST', `/receipts/${id}/transfer/retry`));

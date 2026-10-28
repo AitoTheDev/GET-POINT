@@ -352,18 +352,63 @@ model PointTransaction {
   /// Stable reference sent to LOGA so a retry can never add the points twice.
   reference      String         @unique
   transferStatus TransferStatus @default(PENDING) @map("transfer_status")
+  /// Text the member sees in LOGA, fixed at the first send (from the remark template).
+  remark         String?
+  /// Sends tried so far, and when the next automatic try is due (null = none planned).
+  attempts       Int            @default(0)
+  lastAttemptAt  DateTime?      @map("last_attempt_at")
+  nextAttemptAt  DateTime?      @map("next_attempt_at")
+  /// Why the last send didn't succeed (shown to staff; no secrets).
+  lastError      String?        @map("last_error")
+  sentAt         DateTime?      @map("sent_at")
+  /// Member's LOGA balance right after the points were added, if LOGA said.
+  pointsAfter    Int?           @map("points_after")
   createdById    String?        @map("created_by_id") @db.Uuid
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  receipt   Receipt   @relation(fields: [receiptId], references: [id], onDelete: Restrict)
-  member    Member    @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  pointRule PointRule @relation(fields: [ruleId], references: [id], onDelete: Restrict)
-  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  receipt          Receipt                @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  member           Member                 @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  pointRule        PointRule              @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  createdBy        User?                  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  transferAttempts PointTransferAttempt[]
 
   @@index([memberId])
-  @@index([transferStatus])
+  @@index([transferStatus, nextAttemptAt])
   @@map("point_transactions")
+}
+
+/// Every try at sending a point transaction to LOGA (automatic or a staff retry).
+model PointTransferAttempt {
+  id            String         @id @default(uuid()) @db.Uuid
+  transactionId String         @map("transaction_id") @db.Uuid
+  attempt       Int
+  result        TransferStatus
+  error         String?
+  durationMs    Int            @map("duration_ms")
+  /// Staff member who pressed "retry"; null = automatic.
+  triggeredById String?        @map("triggered_by_id") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  transaction PointTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  triggeredBy User?            @relation(fields: [triggeredById], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@map("point_transfer_attempts")
+}
+
+// ---------- Settings ----------
+
+/// One row per Settings page item (see packages/shared/src/settings.ts); missing = default.
+model Setting {
+  key         String   @id
+  value       Json
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("settings")
 }
 
 // ---------- Staff users, roles and permissions ----------
@@ -413,7 +458,7 @@ model User {
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
 
-  role             Role                 @relation(fields: [roleId], references: [id])
+  role             Role                   @relation(fields: [roleId], references: [id])
   scopes           UserScope[]
   sessions         AuthSession[]
   resetTokens      PasswordResetToken[]
@@ -422,6 +467,8 @@ model User {
   pointRules       PointRule[]
   ruleChanges      PointRuleVersion[]
   reviewedReceipts Receipt[]
+  transferRetries  PointTransferAttempt[]
+  settingsChanged  Setting[]
   addedSubmissions Submission[]
   approvedPoints   PointTransaction[]
 

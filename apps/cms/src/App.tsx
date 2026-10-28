@@ -12,6 +12,7 @@ import { MembersPage } from './pages/members/MembersPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PointRulesPage } from './pages/point-rules/PointRulesPage';
 import { HistoryPage } from './pages/receipts/HistoryPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 import { ReviewPage } from './pages/receipts/ReviewPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { ShopsPage } from './pages/shops/ShopsPage';
@@ -25,6 +26,7 @@ const pages: Partial<Record<Menu, ReactElement>> = {
   [Menu.POINT_RULES]: <PointRulesPage />,
   [Menu.RECEIPT_REVIEW]: <ReviewPage />,
   [Menu.RECEIPT_HISTORY]: <HistoryPage />,
+  [Menu.SETTINGS]: <SettingsPage />,
 };
 
 export function AppRoutes() {

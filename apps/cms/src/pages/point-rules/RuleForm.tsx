@@ -18,7 +18,7 @@ import {
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import buddhistEra from 'dayjs/plugin/buddhistEra';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AddonNumber } from '../../components/AddonNumber';
 import { errorMessage } from '../../api/client';
 import { type PointRule, type RuleOptions, useRuleShops, useSaveRule } from '../../api/pointRules';
@@ -46,6 +46,20 @@ export function RuleForm({ form, options, editing, onDone }: RuleFormProps) {
   const capEnabled = Form.useWatch('capEnabled', form);
   const noEnd = Form.useWatch('noEnd', form);
   const noClaimLimit = Form.useWatch('noClaimLimit', form);
+  const defaultClaimDays = options?.defaultClaimDays;
+
+  // The Settings default arrives with the options; apply it to a new, untouched form.
+  useEffect(() => {
+    if (
+      defaultClaimDays === undefined ||
+      editing ||
+      form.isFieldsTouched(['claimDays', 'noClaimLimit'])
+    ) {
+      return;
+    }
+    const { claimDays, noClaimLimit } = newRule(defaultClaimDays);
+    form.setFieldsValue({ claimDays, noClaimLimit });
+  }, [defaultClaimDays, editing, form]);
   const active = Form.useWatch('active', form);
 
   const [placeKind, placeId] = place?.split(':') ?? [];
@@ -78,6 +92,10 @@ export function RuleForm({ form, options, editing, onDone }: RuleFormProps) {
   const reset = () => {
     setError(null);
     form.resetFields();
+    if (defaultClaimDays !== undefined) {
+      const { claimDays, noClaimLimit } = newRule(defaultClaimDays);
+      form.setFieldsValue({ claimDays, noClaimLimit });
+    }
     onDone();
   };
 

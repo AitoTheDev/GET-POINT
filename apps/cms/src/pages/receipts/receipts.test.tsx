@@ -1,4 +1,4 @@
-import { Menu, MENUS } from '@getpoint/shared';
+import { DEFAULT_SETTINGS, Menu, MENUS, orderedRejectReasons } from '@getpoint/shared';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CheckResult, Receipt, ReceiptLocation, ReceiptShop } from '../../api/receipts';
@@ -63,10 +63,18 @@ const approved = receipt({
   reviewedBy: { id: 'u', name: 'ผู้ดูแล' },
   reviewedAt: '2026-10-11T03:00:00Z',
   transaction: {
+    id: 'tx9',
     points: 27,
-    transferStatus: 'PENDING',
+    transferStatus: 'SUCCEEDED',
     rule: { spendAmount: 25, points: 1, place: 'Community Mall A', level: 'LOCATION' },
     calculation: { exact: 27.2, capped: false },
+    remark: 'สะสมแต้มจากใบเสร็จ GP009 · ร้านกาแฟ A',
+    attempts: 1,
+    lastAttemptAt: '2026-10-11T03:00:05Z',
+    nextAttemptAt: null,
+    lastError: null,
+    sentAt: '2026-10-11T03:00:06Z',
+    pointsAfter: 547,
   },
 });
 const rejected = receipt({
@@ -122,6 +130,14 @@ const api =
         body: { PENDING_REVIEW: 24, NEEDS_CHECK: 2, APPROVED: 342, REJECTED: 20, total: 388 },
       };
     if (url === '/api/receipts/locations') return { status: 200, body: locations };
+    if (url === '/api/receipts/config')
+      return {
+        status: 200,
+        body: {
+          rejectReasons: orderedRejectReasons(DEFAULT_SETTINGS.rejectReasons),
+          uploadLimits: { maxFileMb: 10, maxFiles: 10 },
+        },
+      };
     if (url.startsWith('/api/receipts/shops')) return { status: 200, body: shops };
     if (url.includes('/image')) return { status: 200, body: {} };
     if (url.includes('/check')) return { status: 200, body: ok };
@@ -248,7 +264,7 @@ describe('Receipt review page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /ปฏิเสธ/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByLabelText('ใบเสร็จเกินระยะเวลาที่กำหนด')).toBeChecked();
+    expect(await within(dialog).findByLabelText('ใบเสร็จเกินระยะเวลาที่กำหนด')).toBeChecked();
     expect(
       within(dialog).getByText('สมาชิกจะเห็นข้อความ: “ใบเสร็จเกินระยะเวลาที่กำหนด”'),
     ).toBeInTheDocument();
@@ -271,7 +287,7 @@ describe('Receipt review page', () => {
     const { fetchMock } = renderApp('/receipts/review', adminUser, api());
     fireEvent.click(await screen.findByRole('button', { name: /ปฏิเสธ/ }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByLabelText('อื่นๆ (ระบุเหตุผล)'));
+    fireEvent.click(await within(dialog).findByLabelText('อื่นๆ (ระบุเหตุผล)'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'ยืนยันไม่อนุมัติ' }));
     expect(
       await within(dialog).findByText('กรุณาระบุเหตุผลเมื่อเลือก "อื่นๆ"'),
@@ -289,7 +305,10 @@ describe('Receipt review page', () => {
     fireEvent.click(
       await screen.findByText(/อนุมัติแล้ว/, { selector: '.ant-segmented-item-label span' }),
     );
-    expect(await screen.findByText('27 แต้ม')).toBeInTheDocument();
+    // Shown in the receipt details and in the LOGA transfer panel.
+    expect((await screen.findAllByText('27 แต้ม')).length).toBeGreaterThan(0);
+    expect(screen.getByText('ส่งแต้มไป LOGA')).toBeInTheDocument();
+    expect(screen.getByText('547 แต้ม')).toBeInTheDocument();
     expect(screen.getByText(/25 บาท = 1 แต้ม · ระดับสถานที่/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /อนุมัติและให้แต้ม/ })).not.toBeInTheDocument();
   });
@@ -454,6 +473,50 @@ describe('Receipt history page', () => {
         fetchMock.mock.calls.map((c) => String(c[0])).some((u) => u.includes('sort=amount')),
       ).toBe(true),
     );
+  });
+
+  it('shows a failed LOGA transfer and lets staff send it again', async () => {
+    const failed: Receipt = {
+      ...approved,
+      id: 'r7',
+      code: 'GP007',
+      transaction: {
+        ...approved.transaction!,
+        transferStatus: 'FAILED',
+        attempts: 5,
+        nextAttemptAt: null,
+        sentAt: null,
+        pointsAfter: null,
+        lastError: 'LOGA ตอบกลับ: ไม่สามารถเพิ่มแต้มได้',
+      },
+    };
+    let retried = false;
+    renderApp(
+      '/receipts/history',
+      adminUser,
+      api((url, init) => {
+        if (url === '/api/receipts/r7') return { status: 200, body: failed };
+        if (url === '/api/receipts/r7/transfer/retry' && init?.method === 'POST') {
+          retried = true;
+          return { status: 200, body: approved };
+        }
+        if (url.startsWith('/api/receipts?'))
+          return { status: 200, body: { items: [failed], total: 1, page: 1, pageSize: 20 } };
+        return undefined;
+      }),
+    );
+    const row = (await screen.findByText('#GP007')).closest('tr')!;
+    expect(within(row).getByText('ส่งไม่สำเร็จ')).toBeInTheDocument();
+
+    fireEvent.click(within(row).getByRole('button', { name: 'ดูรายละเอียด GP007' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(
+      await within(drawer).findByText('LOGA ตอบกลับ: ไม่สามารถเพิ่มแต้มได้'),
+    ).toBeInTheDocument();
+    expect(within(drawer).getByText(/ระบบหยุดลองส่งอัตโนมัติแล้ว/)).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole('button', { name: /ส่งอีกครั้ง/ }));
+    await waitFor(() => expect(retried).toBe(true));
+    expect(await screen.findByText('ส่งแต้มไป LOGA สำเร็จ')).toBeInTheDocument();
   });
 
   it('opens a receipt with its reject reason and what the member sees', async () => {
