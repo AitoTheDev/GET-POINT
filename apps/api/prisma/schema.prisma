@@ -35,6 +35,7 @@ model Community {
   locations  Location[]
   userScopes UserScope[]
   members    Member[]
+  pointRules PointRule[]
 
   @@map("communities")
 }
@@ -53,6 +54,7 @@ model Location {
   community  Community   @relation(fields: [communityId], references: [id])
   userScopes UserScope[]
   shops      Shop[]
+  pointRules PointRule[]
 
   @@index([communityId])
   @@map("locations")
@@ -86,8 +88,9 @@ model Shop {
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
-  location Location      @relation(fields: [locationId], references: [id])
-  category ShopCategory? @relation(fields: [categoryId], references: [id])
+  location   Location      @relation(fields: [locationId], references: [id])
+  category   ShopCategory? @relation(fields: [categoryId], references: [id])
+  pointRules PointRule[]
 
   @@index([locationId])
   @@index([categoryId])
@@ -150,6 +153,72 @@ model Member {
   @@map("members")
 }
 
+// ---------- Point rules ----------
+
+enum RoundingMode {
+  FLOOR
+  ROUND
+  CEIL
+}
+
+/// "X baht = Y points" set on exactly one of: a Community, a Location or a Shop.
+/// A receipt uses the Shop's rule, else its Location's, else its Community's, picked by the
+/// receipt date. Rules at the same place may not have overlapping active date ranges.
+model PointRule {
+  id          String       @id @default(uuid()) @db.Uuid
+  communityId String?      @map("community_id") @db.Uuid
+  locationId  String?      @map("location_id") @db.Uuid
+  shopId      String?      @map("shop_id") @db.Uuid
+  spendAmount Decimal      @map("spend_amount") @db.Decimal(12, 2)
+  points      Int
+  rounding    RoundingMode @default(FLOOR)
+  /// Optional cap per receipt.
+  maxPoints   Int?         @map("max_points")
+  /// Calendar days (Bangkok), compared with the date printed on the receipt.
+  startDate   DateTime     @map("start_date") @db.Date
+  /// null = no end date.
+  endDate     DateTime?    @map("end_date") @db.Date
+  status      ActiveStatus @default(ACTIVE)
+  /// Increases on every change; each version is kept in point_rule_versions.
+  version     Int          @default(1)
+  createdById String?      @map("created_by_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  community Community?         @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  location  Location?          @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  shop      Shop?              @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  createdBy User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  versions  PointRuleVersion[]
+
+  @@index([communityId])
+  @@index([locationId])
+  @@index([shopId])
+  @@map("point_rules")
+}
+
+/// Every saved version of a rule, so the exact formula used for a past receipt can be shown.
+model PointRuleVersion {
+  id          String       @id @default(uuid()) @db.Uuid
+  ruleId      String       @map("rule_id") @db.Uuid
+  version     Int
+  spendAmount Decimal      @map("spend_amount") @db.Decimal(12, 2)
+  points      Int
+  rounding    RoundingMode
+  maxPoints   Int?         @map("max_points")
+  startDate   DateTime     @map("start_date") @db.Date
+  endDate     DateTime?    @map("end_date") @db.Date
+  status      ActiveStatus
+  changedById String?      @map("changed_by_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  rule      PointRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  changedBy User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@unique([ruleId, version])
+  @@map("point_rule_versions")
+}
+
 // ---------- Staff users, roles and permissions ----------
 
 model Role {
@@ -203,6 +272,8 @@ model User {
   resetTokens PasswordResetToken[]
   auditLogs   AuditLog[]
   members     Member[]
+  pointRules  PointRule[]
+  ruleChanges PointRuleVersion[]
 
   @@index([roleId])
   @@map("users")

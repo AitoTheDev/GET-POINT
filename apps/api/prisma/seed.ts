@@ -137,6 +137,71 @@ async function seedMembers(communityId: string) {
   }
 }
 
+/**
+ * Point rules from the mockup: Mall A 25 baht = 1 point, Mall B 50 baht = 1 point, both from
+ * 1 Oct 2026 (01/10/2569) with no end date. Mall C has none, to show "no rule" when testing.
+ */
+async function seedPointRules(locationIds: string[]) {
+  if ((await prisma.pointRule.count()) > 0) return;
+  for (const [index, spendAmount] of [25, 50].entries()) {
+    const config = {
+      spendAmount,
+      points: 1,
+      rounding: 'FLOOR' as const,
+      startDate: new Date('2026-10-01T00:00:00Z'),
+    };
+    await prisma.pointRule.create({
+      data: {
+        locationId: locationIds[index],
+        ...config,
+        versions: { create: { version: 1, status: 'ACTIVE', ...config } },
+      },
+    });
+  }
+}
+
+/**
+ * A second, separate Community (development only) with its own mall, shops and point rule.
+ * manager@ and staff@ are not assigned to it, so it shows what they can't see or change.
+ */
+const SECOND_COMMUNITY = 'Northern Community';
+async function seedSecondCommunity() {
+  const community =
+    (await prisma.community.findFirst({ where: { name: SECOND_COMMUNITY } })) ??
+    (await prisma.community.create({ data: { name: SECOND_COMMUNITY } }));
+  const location =
+    (await prisma.location.findFirst({ where: { communityId: community.id } })) ??
+    (await prisma.location.create({
+      data: { communityId: community.id, name: 'Community Mall E', province: 'เชียงใหม่' },
+    }));
+
+  if ((await prisma.shop.count({ where: { locationId: location.id } })) === 0) {
+    for (const [name, category] of [
+      ['ร้านกาแฟเหนือ', 'คาเฟ่'],
+      ['ร้านข้าวซอย', 'อาหาร'],
+    ]) {
+      const cat = await prisma.shopCategory.findUnique({ where: { name: category } });
+      await prisma.shop.create({ data: { locationId: location.id, name, categoryId: cat?.id } });
+    }
+  }
+
+  if ((await prisma.pointRule.count({ where: { locationId: location.id } })) === 0) {
+    const config = {
+      spendAmount: 20,
+      points: 1,
+      rounding: 'FLOOR' as const,
+      startDate: new Date('2026-10-01T00:00:00Z'),
+    };
+    await prisma.pointRule.create({
+      data: {
+        locationId: location.id,
+        ...config,
+        versions: { create: { version: 1, status: 'ACTIVE', ...config } },
+      },
+    });
+  }
+}
+
 async function upsertUser(input: {
   email: string;
   name: string;
@@ -204,6 +269,8 @@ async function main() {
       }),
     );
     await seedMembers(community.id);
+    await seedPointRules(locations.map((l) => l.id));
+    await seedSecondCommunity();
   }
 
   console.log('Seed complete.');

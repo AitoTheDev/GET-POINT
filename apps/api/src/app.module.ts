@@ -10,6 +10,7 @@ import { LogaModule } from './loga/loga.module';
 import { MailModule } from './mail/mail.module';
 import { MembersModule } from './members/members.module';
 import { OrgModule } from './org/org.module';
+import { PointRulesModule } from './point-rules/point-rules.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     OrgModule,
     LogaModule,
     MembersModule,
+    PointRulesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
