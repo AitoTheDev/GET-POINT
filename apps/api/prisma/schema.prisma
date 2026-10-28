@@ -1,5 +1,5 @@
 // GET POINT CMS database schema.
-// Models are added session by session (Session 1: users/roles/permissions, ...).
+// Models are added session by session. Table names are snake_case plural.
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +8,174 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum ActiveStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// ---------- Organisation (Session 1 keeps these minimal; Session 2 adds management) ----------
+
+model Community {
+  id        String       @id @default(uuid()) @db.Uuid
+  code      String       @unique
+  name      String
+  status    ActiveStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  locations  Location[]
+  userScopes UserScope[]
+
+  @@map("communities")
+}
+
+/// A Community Mall (สถานที่), e.g. LOC001 Community Mall A.
+model Location {
+  id          String       @id @default(uuid()) @db.Uuid
+  communityId String       @map("community_id") @db.Uuid
+  code        String       @unique
+  name        String
+  province    String?
+  status      ActiveStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  community  Community   @relation(fields: [communityId], references: [id])
+  userScopes UserScope[]
+
+  @@index([communityId])
+  @@map("locations")
+}
+
+// ---------- Staff users, roles and permissions ----------
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  /// Stable identifier. System roles: ADMIN, STAFF, COMMUNITY_MANAGER.
+  key         String   @unique
+  name        String
+  description String?
+  /// System roles cannot be deleted; ADMIN permissions cannot be reduced.
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+/// View/manage grant for one CMS menu (see packages/shared/src/permissions.ts for menu keys).
+model RolePermission {
+  roleId    String  @map("role_id") @db.Uuid
+  menu      String
+  canView   Boolean @default(false) @map("can_view")
+  canManage Boolean @default(false) @map("can_manage")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, menu])
+  @@map("role_permissions")
+}
+
+model User {
+  id                 String     @id @default(uuid()) @db.Uuid
+  email              String     @unique
+  name               String
+  passwordHash       String     @map("password_hash")
+  status             UserStatus @default(ACTIVE)
+  roleId             String     @map("role_id") @db.Uuid
+  /// true = may access every Community/Location (ทุกสถานที่).
+  scopeAll           Boolean    @default(false) @map("scope_all")
+  /// Set after an admin reset; the user must choose a new password at next login.
+  mustChangePassword Boolean    @default(false) @map("must_change_password")
+  lastLoginAt        DateTime?  @map("last_login_at")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  role          Role                 @relation(fields: [roleId], references: [id])
+  scopes        UserScope[]
+  sessions      AuthSession[]
+  resetTokens   PasswordResetToken[]
+  auditLogs     AuditLog[]
+
+  @@index([roleId])
+  @@map("users")
+}
+
+/// One row grants access to a whole Community or to a single Location (exactly one is set).
+model UserScope {
+  id          String  @id @default(uuid()) @db.Uuid
+  userId      String  @map("user_id") @db.Uuid
+  communityId String? @map("community_id") @db.Uuid
+  locationId  String? @map("location_id") @db.Uuid
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community? @relation(fields: [communityId], references: [id])
+  location  Location?  @relation(fields: [locationId], references: [id])
+
+  @@unique([userId, communityId, locationId])
+  @@index([userId])
+  @@map("user_scopes")
+}
+
+/// Refresh-token session. Only a SHA-256 hash of the token is stored.
+model AuthSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  rememberMe Boolean   @default(false) @map("remember_me")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+/// Email "forgot password" token. Only a SHA-256 hash is stored; single use.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------- Audit ----------
+
+/// Who did what. metadata must never contain passwords, tokens or secrets.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
 }

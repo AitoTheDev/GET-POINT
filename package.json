@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "db:generate": "npm run prisma:generate -w @getpoint/api",
-    "db:migrate": "npm run prisma:migrate -w @getpoint/api"
+    "db:migrate": "npm run prisma:migrate -w @getpoint/api",
+    "db:seed": "npm run db:seed -w @getpoint/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

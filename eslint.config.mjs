@@ -11,8 +11,15 @@ export default tseslint.config(
   {
     files: ['**/*.ts', '**/*.tsx'],
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
     },
+  },
+  {
+    files: ['**/*.{js,cjs}'],
+    languageOptions: { globals: globals.node, sourceType: 'commonjs' },
   },
   {
     files: ['apps/api/**/*.ts'],

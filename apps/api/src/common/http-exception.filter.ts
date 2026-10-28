@@ -48,11 +48,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const raw = (response as { message?: unknown }).message;
         // ValidationPipe puts a list of field errors in `message`.
         if (Array.isArray(raw)) {
-          message = 'Validation failed';
-          details = raw.map(String);
+          message = 'ข้อมูลไม่ถูกต้อง';
+          details = raw.map((m) =>
+            String(m).replace(/^property (\S+) should not exist$/, 'ไม่รู้จักข้อมูล "$1"'),
+          );
         } else if (typeof raw === 'string') {
           message = raw;
         }
+      }
+      if (statusCode === HttpStatus.TOO_MANY_REQUESTS) {
+        message = 'มีการเรียกใช้งานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
       }
 
       return {

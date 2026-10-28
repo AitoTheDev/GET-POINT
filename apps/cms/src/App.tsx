@@ -1,15 +1,66 @@
+import { Menu } from '@getpoint/shared';
+import type { ReactElement } from 'react';
 import { Route, Routes } from 'react-router-dom';
+import { RedirectIfAuthenticated, RequireAuth, RequireMenu } from './auth/guards';
 import { AppLayout } from './layout/AppLayout';
-import { mainNav, settingsNav } from './navigation';
+import { allNav } from './navigation';
+import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { LoginPage } from './pages/auth/LoginPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { UsersPage } from './pages/users/UsersPage';
+
+/** Pages built so far; every other menu shows a placeholder naming its session. */
+const pages: Partial<Record<Menu, ReactElement>> = {
+  [Menu.USERS]: <UsersPage />,
+};
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
-        {[...mainNav, settingsNav].map((item) => (
-          <Route key={item.path} path={item.path} element={<PlaceholderPage />} />
+      <Route
+        path="/login"
+        element={
+          <RedirectIfAuthenticated>
+            <LoginPage />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <RedirectIfAuthenticated>
+            <ForgotPasswordPage />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        path="/change-password"
+        element={
+          <RequireAuth>
+            <ChangePasswordPage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        element={
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        {allNav.map((item) => (
+          <Route
+            key={item.path}
+            path={item.path}
+            element={
+              <RequireMenu menu={item.menu}>{pages[item.menu] ?? <PlaceholderPage />}</RequireMenu>
+            }
+          />
         ))}
         <Route path="*" element={<NotFoundPage />} />
       </Route>

@@ -1,7 +1,14 @@
-import { BellOutlined, DownOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
-import { App, Avatar, Badge, Divider, Dropdown, Layout, Menu, Space, Typography } from 'antd';
+import {
+  BellOutlined,
+  DownOutlined,
+  KeyOutlined,
+  LogoutOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { Avatar, Badge, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import { useAuth } from '../auth/useAuth';
 import { findNavItem, mainNav, settingsNav } from '../navigation';
 import { colors } from '../theme';
 
@@ -12,10 +19,21 @@ const SIDER_WIDTH = 270;
 export function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { user, can, logout } = useAuth();
   const current = findNavItem(pathname);
 
-  const logout = () => message.info('การเข้าสู่ระบบจะเปิดใช้งานใน Session 1');
+  const visibleNav = mainNav.filter((item) => can(item.menu));
+  const bottomItems = [
+    ...(can(settingsNav.menu)
+      ? [{ key: settingsNav.path, icon: settingsNav.icon, label: settingsNav.label }]
+      : []),
+    { key: 'logout', icon: <LogoutOutlined />, label: 'ออกจากระบบ' },
+  ];
+
+  const onLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -24,9 +42,16 @@ export function AppLayout() {
         width={SIDER_WIDTH}
         breakpoint="lg"
         collapsedWidth={0}
-        style={{ borderRight: `1px solid ${colors.border}`, position: 'sticky', top: 0, height: '100vh' }}
+        style={{
+          borderRight: `1px solid ${colors.border}`,
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+        }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '24px 12px' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '24px 12px' }}
+        >
           <img
             src={logo}
             alt="GET POINT"
@@ -38,7 +63,11 @@ export function AppLayout() {
             mode="inline"
             selectedKeys={current ? [current.path] : []}
             onClick={({ key }) => navigate(key)}
-            items={mainNav.map((item) => ({ key: item.path, icon: item.icon, label: item.label }))}
+            items={visibleNav.map((item) => ({
+              key: item.path,
+              icon: item.icon,
+              label: item.label,
+            }))}
             style={{ flex: 1, overflowY: 'auto' }}
           />
 
@@ -46,11 +75,8 @@ export function AppLayout() {
           <Menu
             mode="inline"
             selectedKeys={current?.path === settingsNav.path ? [settingsNav.path] : []}
-            onClick={({ key }) => (key === 'logout' ? logout() : navigate(key))}
-            items={[
-              { key: settingsNav.path, icon: settingsNav.icon, label: settingsNav.label },
-              { key: 'logout', icon: <LogoutOutlined />, label: 'ออกจากระบบ' },
-            ]}
+            onClick={({ key }) => (key === 'logout' ? onLogout() : navigate(key))}
+            items={bottomItems}
           />
         </div>
       </Sider>
@@ -80,13 +106,23 @@ export function AppLayout() {
             <Dropdown
               trigger={['click']}
               menu={{
-                items: [{ key: 'logout', icon: <LogoutOutlined />, label: 'ออกจากระบบ' }],
-                onClick: logout,
+                items: [
+                  { key: 'change-password', icon: <KeyOutlined />, label: 'เปลี่ยนรหัสผ่าน' },
+                  { type: 'divider' },
+                  { key: 'logout', icon: <LogoutOutlined />, label: 'ออกจากระบบ', danger: true },
+                ],
+                onClick: ({ key }) =>
+                  key === 'logout' ? onLogout() : navigate('/change-password'),
               }}
             >
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar size={44} icon={<UserOutlined />} style={{ background: '#D9DCE1' }} />
-                <Typography.Text style={{ fontSize: 16 }}>Admin</Typography.Text>
+                <Flex vertical style={{ lineHeight: 1.25 }}>
+                  <Typography.Text style={{ fontSize: 16 }}>{user?.name}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {user?.role.name}
+                  </Typography.Text>
+                </Flex>
                 <DownOutlined style={{ fontSize: 12 }} />
               </Space>
             </Dropdown>

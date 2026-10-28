@@ -21,8 +21,16 @@ describe('HttpExceptionFilter', () => {
       '/api/x',
     );
     expect(body.statusCode).toBe(400);
-    expect(body.message).toBe('Validation failed');
+    expect(body.message).toBe('ข้อมูลไม่ถูกต้อง');
     expect(body.details).toEqual(['phone must be 10 digits', 'amount must be positive']);
+  });
+
+  it('translates the "unknown field" message to Thai', () => {
+    const body = filter.toBody(
+      new BadRequestException(['property confirmPassword should not exist']),
+      '/api/x',
+    );
+    expect(body.details).toEqual(['ไม่รู้จักข้อมูล "confirmPassword"']);
   });
 
   it('hides internals of unknown errors', () => {

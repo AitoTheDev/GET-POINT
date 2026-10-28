@@ -1,0 +1,101 @@
+.gp-auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  background: radial-gradient(120% 90% at 0% 60%, #fdd9db 0%, #fdeaeb 45%, #fdfafb 100%);
+}
+
+.gp-auth__brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 56px;
+  overflow: hidden;
+}
+
+.gp-auth__brand-logo {
+  width: 220px;
+  mix-blend-mode: multiply;
+  margin-bottom: 24px;
+}
+
+.gp-auth__headline {
+  font-size: clamp(40px, 4.2vw, 64px);
+  line-height: 1.12;
+  font-weight: 800;
+  color: #1f2430;
+  margin: 0;
+}
+
+.gp-auth__tagline {
+  font-size: clamp(18px, 1.6vw, 26px);
+  color: #4a505c;
+  margin: 12px 0 8px;
+}
+
+.gp-auth__hero {
+  width: 100%;
+  max-width: 640px;
+  mix-blend-mode: multiply;
+}
+
+.gp-auth__panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.gp-auth__card {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 28px;
+  padding: 48px 48px 32px;
+  box-shadow: 0 20px 60px rgba(227, 20, 27, 0.08);
+}
+
+.gp-auth__card-logo {
+  display: block;
+  width: 190px;
+  margin: 0 auto 16px;
+}
+
+.gp-auth__footer {
+  border-top: 1px solid #e6e8ec;
+  margin-top: 24px;
+  padding-top: 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Big red submit button, as in the mockup */
+.gp-auth .gp-auth__submit {
+  height: 56px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ef2a2f 0%, #d70f16 100%);
+  box-shadow: 0 8px 20px rgba(227, 20, 27, 0.25);
+}
+.gp-auth .gp-auth__submit:not(:disabled):hover {
+  background: linear-gradient(180deg, #f33a3f 0%, #c40d13 100%) !important;
+}
+
+.gp-auth .ant-input-affix-wrapper {
+  height: 52px;
+  border-radius: 12px;
+  background: #f8f9fb;
+}
+
+@media (max-width: 960px) {
+  .gp-auth {
+    grid-template-columns: 1fr;
+  }
+  .gp-auth__brand {
+    display: none;
+  }
+  .gp-auth__card {
+    padding: 32px 20px 24px;
+  }
+}

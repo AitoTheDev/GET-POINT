@@ -13,6 +13,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AppRoutes } from './App';
+import { AuthProvider } from './auth/AuthProvider';
 import { theme } from './theme';
 
 dayjs.locale('th');
@@ -27,7 +28,9 @@ createRoot(document.getElementById('root')!).render(
       <AntApp>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-            <AppRoutes />
+            <AuthProvider>
+              <AppRoutes />
+            </AuthProvider>
           </BrowserRouter>
         </QueryClientProvider>
       </AntApp>
