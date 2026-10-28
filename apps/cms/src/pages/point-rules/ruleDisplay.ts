@@ -21,3 +21,7 @@ export function placeLabels(rule: PointRule): { place: string; shop: string } {
 export function todayInBangkok(now = new Date()): string {
   return new Date(now.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
+
+/** "ส่งได้ภายใน 30 วัน" / "ส่งได้ไม่จำกัดวัน" */
+export const claimLabel = (days: number | null) =>
+  days === null ? 'ส่งได้ไม่จำกัดวัน' : `ส่งได้ภายใน ${days} วัน`;

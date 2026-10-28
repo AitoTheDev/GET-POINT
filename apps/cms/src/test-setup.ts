@@ -9,6 +9,10 @@ afterEach(() => cleanup());
 // test files run in parallel; wait longer before a findBy* gives up.
 configure({ asyncUtilTimeout: 5000 });
 
+// Receipt images are shown from object URLs, which jsdom does not provide.
+URL.createObjectURL = () => 'blob:receipt';
+URL.revokeObjectURL = () => {};
+
 // Ant Design reads these browser APIs, which jsdom does not provide.
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

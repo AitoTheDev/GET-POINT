@@ -6,7 +6,9 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Badge, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
+import { Menu as MenuKey } from '@getpoint/shared';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useReceiptSummary } from '../api/receipts';
 import logo from '../assets/logo.png';
 import { useAuth } from '../auth/useAuth';
 import { findNavItem, mainNav, settingsNav } from '../navigation';
@@ -23,6 +25,8 @@ export function AppLayout() {
   const current = findNavItem(pathname);
 
   const visibleNav = mainNav.filter((item) => can(item.menu));
+  // Orange count next to ตรวจสอบใบเสร็จ, like the mockup.
+  const pending = useReceiptSummary(can(MenuKey.RECEIPT_REVIEW)).data?.PENDING_REVIEW ?? 0;
   const bottomItems = [
     ...(can(settingsNav.menu)
       ? [{ key: settingsNav.path, icon: settingsNav.icon, label: settingsNav.label }]
@@ -66,7 +70,27 @@ export function AppLayout() {
             items={visibleNav.map((item) => ({
               key: item.path,
               icon: item.icon,
-              label: item.label,
+              label:
+                item.menu === MenuKey.RECEIPT_REVIEW && pending > 0 ? (
+                  <Flex justify="space-between" align="center">
+                    {item.label}
+                    <span
+                      aria-label={`รอตรวจสอบ ${pending} ใบ`}
+                      style={{
+                        background: colors.warningBg,
+                        color: colors.warning,
+                        borderRadius: 999,
+                        padding: '0 10px',
+                        lineHeight: '26px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {pending > 99 ? '99+' : pending}
+                    </span>
+                  </Flex>
+                ) : (
+                  item.label
+                ),
             }))}
             style={{ flex: 1, overflowY: 'auto' }}
           />

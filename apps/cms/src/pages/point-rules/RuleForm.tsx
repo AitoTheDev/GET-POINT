@@ -45,6 +45,7 @@ export function RuleForm({ form, options, editing, onDone }: RuleFormProps) {
   const place = Form.useWatch('place', form);
   const capEnabled = Form.useWatch('capEnabled', form);
   const noEnd = Form.useWatch('noEnd', form);
+  const noClaimLimit = Form.useWatch('noClaimLimit', form);
   const active = Form.useWatch('active', form);
 
   const [placeKind, placeId] = place?.split(':') ?? [];
@@ -90,6 +91,7 @@ export function RuleForm({ form, options, editing, onDone }: RuleFormProps) {
       points: values.points!,
       rounding: values.rounding,
       maxPoints: values.capEnabled ? (values.maxPoints ?? null) : null,
+      claimDays: values.noClaimLimit ? null : (values.claimDays ?? null),
       startDate: values.startDate!.format('YYYY-MM-DD'),
       endDate: values.noEnd || !values.endDate ? null : values.endDate.format('YYYY-MM-DD'),
       status: values.active ? ('ACTIVE' as const) : ('INACTIVE' as const),
@@ -245,6 +247,41 @@ export function RuleForm({ form, options, editing, onDone }: RuleFormProps) {
             />
           </Form.Item>
         )}
+
+        <Form.Item
+          label="ส่งใบเสร็จได้ภายใน"
+          required
+          extra="นับจากวันที่บนใบเสร็จถึงวันที่สมาชิกส่ง ใบเสร็จที่เกินกำหนดจะอนุมัติไม่ได้"
+          style={{ marginBottom: 16 }}
+        >
+          <Flex gap={12} align="flex-start">
+            <Form.Item
+              name="claimDays"
+              noStyle
+              rules={[
+                ({ getFieldValue }) => ({
+                  validator: (_, value?: number | null) =>
+                    getFieldValue('noClaimLimit') || (value !== null && value !== undefined)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('กรุณากรอกจำนวนวัน')),
+                }),
+              ]}
+            >
+              <AddonNumber
+                aria-label="ส่งใบเสร็จได้ภายใน (วัน)"
+                after="วัน หลังวันที่บนใบเสร็จ"
+                min={0}
+                max={3650}
+                precision={0}
+                disabled={noClaimLimit}
+                style={{ maxWidth: 320 }}
+              />
+            </Form.Item>
+            <Form.Item name="noClaimLimit" valuePropName="checked" noStyle>
+              <Checkbox style={{ marginTop: 5 }}>ไม่จำกัด</Checkbox>
+            </Form.Item>
+          </Flex>
+        </Form.Item>
 
         <Row gutter={16}>
           <Col xs={24} md={12}>

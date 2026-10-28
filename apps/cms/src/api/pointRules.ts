@@ -24,6 +24,8 @@ export interface PointRule {
   points: number;
   rounding: RoundingMode;
   maxPoints: number | null;
+  /** Days after the receipt date a receipt may still be sent; null = no limit. */
+  claimDays: number | null;
   /** YYYY-MM-DD */
   startDate: string;
   endDate: string | null;
@@ -43,6 +45,8 @@ export interface RuleVersion {
   points: number;
   rounding: RoundingMode;
   maxPoints: number | null;
+  /** Days after the receipt date a receipt may still be sent; null = no limit. */
+  claimDays: number | null;
   startDate: string;
   endDate: string | null;
   status: ActiveStatus;
@@ -97,6 +101,8 @@ export interface RuleInput {
   points: number;
   rounding: RoundingMode;
   maxPoints: number | null;
+  /** Days after the receipt date a receipt may still be sent; null = no limit. */
+  claimDays: number | null;
   startDate: string;
   endDate: string | null;
   status: ActiveStatus;

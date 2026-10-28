@@ -10,6 +10,7 @@ import { PASSWORD_MIN_LENGTH, SystemRole } from '@getpoint/shared';
 import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../src/auth/crypto.util';
 import { SYSTEM_ROLES } from '../src/roles/default-permissions';
+import { addSampleReceipts } from './sample-receipts';
 
 const prisma = new PrismaClient();
 
@@ -148,6 +149,7 @@ async function seedPointRules(locationIds: string[]) {
       spendAmount,
       points: 1,
       rounding: 'FLOOR' as const,
+      claimDays: 30,
       startDate: new Date('2026-10-01T00:00:00Z'),
     };
     await prisma.pointRule.create({
@@ -175,6 +177,18 @@ async function seedSecondCommunity() {
       data: { communityId: community.id, name: 'Community Mall E', province: 'เชียงใหม่' },
     }));
 
+  // A member of this Community (not linked to the mock LOGA).
+  if (!(await prisma.member.findFirst({ where: { communityId: community.id } }))) {
+    await prisma.member.create({
+      data: {
+        communityId: community.id,
+        phone: '0898765432',
+        firstName: 'สมศักดิ์',
+        lastName: 'ภูเขา',
+      },
+    });
+  }
+
   if ((await prisma.shop.count({ where: { locationId: location.id } })) === 0) {
     for (const [name, category] of [
       ['ร้านกาแฟเหนือ', 'คาเฟ่'],
@@ -190,6 +204,7 @@ async function seedSecondCommunity() {
       spendAmount: 20,
       points: 1,
       rounding: 'FLOOR' as const,
+      claimDays: 30,
       startDate: new Date('2026-10-01T00:00:00Z'),
     };
     await prisma.pointRule.create({
@@ -271,6 +286,9 @@ async function main() {
     await seedMembers(community.id);
     await seedPointRules(locations.map((l) => l.id));
     await seedSecondCommunity();
+    if ((await prisma.receipt.count()) === 0) {
+      console.log(`  added ${await addSampleReceipts(prisma)} sample receipts to review`);
+    }
   }
 
   console.log('Seed complete.');

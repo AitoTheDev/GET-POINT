@@ -11,6 +11,7 @@ import { MailModule } from './mail/mail.module';
 import { MembersModule } from './members/members.module';
 import { OrgModule } from './org/org.module';
 import { PointRulesModule } from './point-rules/point-rules.module';
+import { ReceiptsModule } from './receipts/receipts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
     LogaModule,
     MembersModule,
     PointRulesModule,
+    ReceiptsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

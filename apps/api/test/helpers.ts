@@ -44,7 +44,7 @@ export async function createTestApp() {
  */
 export async function resetData(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE audit_logs, password_reset_tokens, auth_sessions, user_scopes, point_rule_versions, point_rules, members, users, role_permissions, roles, shops, shop_categories, locations, communities RESTART IDENTITY CASCADE',
+    'TRUNCATE audit_logs, password_reset_tokens, auth_sessions, user_scopes, point_transactions, receipts, submissions, point_rule_versions, point_rules, members, users, role_permissions, roles, shops, shop_categories, locations, communities RESTART IDENTITY CASCADE',
   );
 
   const roles: Record<string, string> = {};

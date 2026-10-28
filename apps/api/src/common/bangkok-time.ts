@@ -8,6 +8,10 @@ export const bangkokDayStart = (day: string) => new Date(`${day}T00:00:00.000+07
 /** Midnight in Bangkok at the start of the day after "YYYY-MM-DD" (exclusive upper bound). */
 export const bangkokDayEnd = (day: string) => new Date(bangkokDayStart(day).getTime() + DAY_MS);
 
+/** The Bangkok calendar day of an instant, as "YYYY-MM-DD". */
+export const bangkokDay = (date: Date) =>
+  new Date(date.getTime() + OFFSET_MS).toISOString().slice(0, 10);
+
 /** Midnight in Bangkok on the 1st of the current Bangkok month. */
 export function bangkokMonthStart(now = new Date()): Date {
   const local = new Date(now.getTime() + OFFSET_MS);

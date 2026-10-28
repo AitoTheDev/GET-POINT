@@ -119,6 +119,36 @@ describe('Point rules (e2e)', () => {
       expect(r.calculation).toEqual({ points: 20, exact: 27.2, capped: true });
     });
 
+    it('keeps a receipt age limit: 30 days by default, changeable or none', async () => {
+      const rule = await create(admin, { level: 'LOCATION', targetId: data.locA.id }).expect(201);
+      expect(rule.body.claimDays).toBe(30);
+
+      const none = await api(app, admin)
+        .patch(`/point-rules/${rule.body.id}`)
+        .send({ claimDays: null })
+        .expect(200);
+      expect(none.body).toMatchObject({ claimDays: null, version: 2 });
+      const seven = await api(app, admin)
+        .patch(`/point-rules/${rule.body.id}`)
+        .send({ claimDays: 7 })
+        .expect(200);
+      expect(seven.body.claimDays).toBe(7);
+
+      const versions = await api(app, admin)
+        .get(`/point-rules/${rule.body.id}/versions`)
+        .expect(200);
+      expect(versions.body.map((v: { claimDays: number | null }) => v.claimDays)).toEqual([
+        7,
+        null,
+        30,
+      ]);
+
+      const bad = await create(admin, { level: 'SHOP', targetId: shopA.id, claimDays: -1 }).expect(
+        400,
+      );
+      expect(bad.body.details).toContain('จำนวนวันต้องไม่ติดลบ');
+    });
+
     it('rounds as chosen', async () => {
       await create(admin, { level: 'LOCATION', targetId: data.locA.id, rounding: 'CEIL' }).expect(
         201,

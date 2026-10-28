@@ -14,6 +14,8 @@ export interface ApiErrorBody {
   error: string;
   message: string;
   details?: string[];
+  /** Machine-readable reason for some errors (e.g. why a receipt can't be approved). */
+  code?: string;
   path: string;
   timestamp: string;
 }
@@ -43,6 +45,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const response = exception.getResponse();
       let message = exception.message;
       let details: string[] | undefined;
+      let code: string | undefined;
 
       if (typeof response === 'object' && response !== null) {
         const raw = (response as { message?: unknown }).message;
@@ -55,6 +58,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         } else if (typeof raw === 'string') {
           message = raw;
         }
+        const rawCode = (response as { code?: unknown }).code;
+        if (typeof rawCode === 'string') code = rawCode;
+      }
+      if (statusCode === HttpStatus.PAYLOAD_TOO_LARGE) {
+        message = 'ไฟล์มีขนาดเกิน 10 MB';
       }
       if (statusCode === HttpStatus.TOO_MANY_REQUESTS) {
         message = 'มีการเรียกใช้งานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
@@ -65,6 +73,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         error: HttpStatus[statusCode] ?? 'Error',
         message,
         ...(details && { details }),
+        ...(code && { code }),
         path,
         timestamp,
       };

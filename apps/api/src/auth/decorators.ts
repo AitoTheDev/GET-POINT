@@ -10,9 +10,12 @@ export const ALLOW_PENDING_PASSWORD_CHANGE = 'allowPendingPasswordChange';
 /** Route needs no login. */
 export const Public = () => SetMetadata(IS_PUBLIC, true);
 
-/** Route needs view/manage on a CMS menu. Checked on the server, regardless of what the UI hides. */
-export const RequirePermission = (menu: Menu, level: PermissionLevel) =>
-  SetMetadata(REQUIRED_PERMISSION, { menu, level });
+/**
+ * Route needs view/manage on a CMS menu (or on any one of several menus).
+ * Checked on the server, regardless of what the UI hides.
+ */
+export const RequirePermission = (menu: Menu | Menu[], level: PermissionLevel) =>
+  SetMetadata(REQUIRED_PERMISSION, { menus: Array.isArray(menu) ? menu : [menu], level });
 
 /** Route stays usable while the user still has to replace a temporary password. */
 export const AllowPendingPasswordChange = () => SetMetadata(ALLOW_PENDING_PASSWORD_CHANGE, true);

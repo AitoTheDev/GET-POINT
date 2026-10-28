@@ -1,4 +1,4 @@
-import type { RoundingMode } from '@getpoint/shared';
+import { DEFAULT_CLAIM_DAYS, type RoundingMode } from '@getpoint/shared';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { PointRule } from '../../api/pointRules';
 import { todayInBangkok } from './ruleDisplay';
@@ -13,6 +13,9 @@ export interface RuleFormValues {
   rounding: RoundingMode;
   capEnabled: boolean;
   maxPoints?: number;
+  claimDays?: number;
+  /** No receipt age limit. */
+  noClaimLimit: boolean;
   startDate?: Dayjs;
   endDate?: Dayjs | null;
   noEnd: boolean;
@@ -26,6 +29,8 @@ export const newRule = (): RuleFormValues => ({
   points: 1,
   rounding: 'FLOOR',
   capEnabled: false,
+  claimDays: DEFAULT_CLAIM_DAYS,
+  noClaimLimit: false,
   startDate: dayjs(todayInBangkok()),
   noEnd: true,
   active: true,
@@ -44,6 +49,8 @@ export function valuesOf(rule: PointRule): RuleFormValues {
     rounding: rule.rounding,
     capEnabled: rule.maxPoints !== null,
     maxPoints: rule.maxPoints ?? undefined,
+    claimDays: rule.claimDays ?? DEFAULT_CLAIM_DAYS,
+    noClaimLimit: rule.claimDays === null,
     startDate: dayjs(rule.startDate),
     endDate: rule.endDate ? dayjs(rule.endDate) : null,
     noEnd: rule.endDate === null,

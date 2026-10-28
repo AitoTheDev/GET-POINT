@@ -48,6 +48,14 @@ export class CreatePointRuleDto {
   @Max(10_000_000)
   maxPoints?: number | null;
 
+  /** Days after the receipt date a receipt may still be sent; null = no limit. */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt({ message: 'จำนวนวันต้องเป็นจำนวนเต็ม' })
+  @Min(0, { message: 'จำนวนวันต้องไม่ติดลบ' })
+  @Max(3650)
+  claimDays?: number | null;
+
   @Matches(DATE, DATE_MESSAGE)
   startDate: string;
 
@@ -85,6 +93,14 @@ export class UpdatePointRuleDto {
   @Min(1, { message: 'แต้มสูงสุดต้องอย่างน้อย 1' })
   @Max(10_000_000)
   maxPoints?: number | null;
+
+  /** Days after the receipt date a receipt may still be sent; null = no limit. */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt({ message: 'จำนวนวันต้องเป็นจำนวนเต็ม' })
+  @Min(0, { message: 'จำนวนวันต้องไม่ติดลบ' })
+  @Max(3650)
+  claimDays?: number | null;
 
   @IsOptional()
   @Matches(DATE, DATE_MESSAGE)

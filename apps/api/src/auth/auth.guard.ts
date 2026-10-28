@@ -76,9 +76,12 @@ export class AuthGuard implements CanActivate {
     }
 
     const required = this.reflector.getAllAndOverride<
-      { menu: Menu; level: PermissionLevel } | undefined
+      { menus: Menu[]; level: PermissionLevel } | undefined
     >(REQUIRED_PERMISSION, targets);
-    if (required && !hasPermission(req.user.permissions, required.menu, required.level)) {
+    if (
+      required &&
+      !required.menus.some((menu) => hasPermission(req.user.permissions, menu, required.level))
+    ) {
       throw new ForbiddenException('คุณไม่มีสิทธิ์ใช้งานส่วนนี้');
     }
 

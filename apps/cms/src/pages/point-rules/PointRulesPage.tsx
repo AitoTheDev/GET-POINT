@@ -11,7 +11,7 @@ import { colors } from '../../theme';
 import { PreviewCard } from './PreviewCard';
 import { RuleForm } from './RuleForm';
 import { type RuleFormValues, valuesOf } from './ruleFormValues';
-import { placeLabels, rangeLabel } from './ruleDisplay';
+import { claimLabel, placeLabels, rangeLabel } from './ruleDisplay';
 import { RuleTester } from './RuleTester';
 import { VersionsModal } from './VersionsModal';
 
@@ -130,6 +130,9 @@ export function PointRulesPage() {
                       สูงสุด {r.maxPoints.toLocaleString('en-US')} แต้ม/ใบเสร็จ
                     </Typography.Text>
                   )}
+                  <Typography.Text type="secondary" style={{ display: 'block', fontSize: 13 }}>
+                    {claimLabel(r.claimDays)}
+                  </Typography.Text>
                 </>
               ),
             },

@@ -31,6 +31,7 @@ const rule = (overrides: Partial<PointRule>): PointRule => ({
   points: 1,
   rounding: 'FLOOR',
   maxPoints: null,
+  claimDays: 30,
   startDate: '2026-10-01',
   endDate: null,
   status: 'ACTIVE',
@@ -83,6 +84,7 @@ describe('Point rules page', () => {
     expect(within(row).getByText('50 บาท = 1 แต้ม')).toBeInTheDocument();
     expect(within(row).getByText('สูงสุด 100 แต้ม/ใบเสร็จ')).toBeInTheDocument();
     expect(within(row).getByText('01/10/2569 – ไม่กำหนด')).toBeInTheDocument();
+    expect(within(row).getByText('ส่งได้ภายใน 30 วัน')).toBeInTheDocument();
     expect(within(row).getByText('เปิดใช้งาน')).toBeInTheDocument();
 
     expect(previewPoints()).toBe('27 แต้ม');
@@ -140,6 +142,7 @@ describe('Point rules page', () => {
         points: 2,
         rounding: 'FLOOR',
         maxPoints: null,
+        claimDays: 30,
         startDate: todayInBangkok(),
         endDate: null,
         status: 'ACTIVE',
@@ -180,6 +183,7 @@ describe('Point rules page', () => {
     expect(screen.getByLabelText('แต้มสูงสุดต่อใบเสร็จ')).toHaveValue('100');
 
     fireEvent.click(screen.getByLabelText('สถานะเงื่อนไข'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ไม่จำกัด' }));
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกเงื่อนไข' }));
     await waitFor(() =>
       expect(patched).toEqual({
@@ -187,6 +191,7 @@ describe('Point rules page', () => {
         points: 1,
         rounding: 'FLOOR',
         maxPoints: 100,
+        claimDays: null,
         startDate: '2026-10-01',
         endDate: null,
         status: 'INACTIVE',

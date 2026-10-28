@@ -1,5 +1,6 @@
 import {
   calculatePoints,
+  DEFAULT_CLAIM_DAYS,
   formatRate,
   type PointRuleLevel,
   type RoundingMode,
@@ -56,6 +57,8 @@ interface RuleConfig {
   points: number;
   rounding: RoundingMode;
   maxPoints: number | null;
+  /** Days after the receipt date a receipt may still be sent; null = no limit. */
+  claimDays: number | null;
   startDate: string;
   endDate: string | null;
   status: 'ACTIVE' | 'INACTIVE';
@@ -66,6 +69,7 @@ const configOf = (r: {
   points: number;
   rounding: RoundingMode;
   maxPoints: number | null;
+  claimDays: number | null;
   startDate: Date;
   endDate: Date | null;
   status: 'ACTIVE' | 'INACTIVE';
@@ -74,6 +78,7 @@ const configOf = (r: {
   points: r.points,
   rounding: r.rounding,
   maxPoints: r.maxPoints,
+  claimDays: r.claimDays,
   startDate: toDay(r.startDate),
   endDate: r.endDate ? toDay(r.endDate) : null,
   status: r.status,
@@ -201,6 +206,7 @@ export class PointRulesService {
       points: dto.points,
       rounding: dto.rounding,
       maxPoints: dto.maxPoints ?? null,
+      claimDays: dto.claimDays !== undefined ? dto.claimDays : DEFAULT_CLAIM_DAYS,
       startDate: dto.startDate,
       endDate: dto.endDate ?? null,
       status: dto.status ?? 'ACTIVE',
@@ -245,6 +251,7 @@ export class PointRulesService {
       points: dto.points ?? before.points,
       rounding: dto.rounding ?? before.rounding,
       maxPoints: dto.maxPoints !== undefined ? dto.maxPoints : before.maxPoints,
+      claimDays: dto.claimDays !== undefined ? dto.claimDays : before.claimDays,
       startDate: dto.startDate ?? before.startDate,
       endDate: dto.endDate !== undefined ? dto.endDate : before.endDate,
       status: dto.status ?? before.status,
@@ -317,6 +324,18 @@ export class PointRulesService {
       rule,
       calculation: rule && query.amount !== undefined ? calculatePoints(query.amount, rule) : null,
     };
+  }
+
+  /** The rule a receipt uses, as plain data (for approval and its snapshot); null = none. */
+  async applicableRule(shopId: string, date: string) {
+    const found = await this.findApplicableRule(shopId, date);
+    if (!found) return null;
+    const { canManage: _, ...rule } = toRule(found, {
+      all: true,
+      communityIds: [],
+      locationIds: [],
+    });
+    return rule;
   }
 
   /**
@@ -408,6 +427,7 @@ const toColumns = (c: RuleConfig) => ({
   points: c.points,
   rounding: c.rounding,
   maxPoints: c.maxPoints,
+  claimDays: c.claimDays,
   startDate: toDate(c.startDate),
   endDate: c.endDate ? toDate(c.endDate) : null,
   status: c.status,

@@ -3,7 +3,7 @@ import { Alert, Modal, Table } from 'antd';
 import { errorMessage } from '../../api/client';
 import { type PointRule, type RuleVersion, useRuleVersions } from '../../api/pointRules';
 import { StatusPill } from '../../components/StatusPill';
-import { placeLabels, rangeLabel } from './ruleDisplay';
+import { claimLabel, placeLabels, rangeLabel } from './ruleDisplay';
 
 /** Every saved version of a rule, newest first. */
 export function VersionsModal({ rule, onClose }: { rule: PointRule; onClose: () => void }) {
@@ -31,6 +31,7 @@ export function VersionsModal({ rule, onClose }: { rule: PointRule; onClose: () 
           { title: 'อัตราให้แต้ม', render: (_, v) => formatRate(v) },
           { title: 'การปัดเศษ', render: (_, v) => RoundingModeLabel[v.rounding] },
           { title: 'สูงสุด/ใบเสร็จ', render: (_, v) => v.maxPoints ?? '-' },
+          { title: 'ส่งได้ภายใน', render: (_, v) => claimLabel(v.claimDays) },
           { title: 'ช่วงวันที่', render: (_, v) => rangeLabel(v) },
           {
             title: 'สถานะ',

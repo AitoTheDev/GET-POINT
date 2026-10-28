@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
 
 describe('HttpExceptionFilter', () => {
@@ -11,6 +11,19 @@ describe('HttpExceptionFilter', () => {
       error: 'NOT_FOUND',
       message: 'Shop not found',
       path: '/api/shops/1',
+    });
+    expect(body.details).toBeUndefined();
+  });
+
+  it('passes a machine-readable code through', () => {
+    const body = filter.toBody(
+      new ConflictException({ message: 'ร้านค้าไม่ร่วมรายการ', code: 'SHOP_NOT_PARTICIPATING' }),
+      '/api/x',
+    );
+    expect(body).toMatchObject({
+      statusCode: 409,
+      message: 'ร้านค้าไม่ร่วมรายการ',
+      code: 'SHOP_NOT_PARTICIPATING',
     });
     expect(body.details).toBeUndefined();
   });

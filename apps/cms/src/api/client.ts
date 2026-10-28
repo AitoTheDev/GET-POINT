@@ -69,7 +69,8 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
       ...init,
       credentials: 'same-origin',
       headers: {
-        ...(init?.body !== undefined && { 'Content-Type': 'application/json' }),
+        // JSON bodies are strings; FormData (file uploads) sets its own multipart header.
+        ...(typeof init?.body === 'string' && { 'Content-Type': 'application/json' }),
         ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
         ...init?.headers,
       },
@@ -104,6 +105,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return (res.status === 204 ? null : await res.json().catch(() => null)) as T;
 }
 
+/** Fetch a protected file (e.g. a receipt image) as a Blob; <img src> can't send the token. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const res = await sendWithRenewal(path);
+  if (!res.ok) throw await toError(res);
+  return res.blob();
+}
+
 /** Download a file (e.g. Excel export) and hand it to the browser as `filename`. */
 export async function apiDownload(path: string, filename: string): Promise<void> {
   const res = await sendWithRenewal(path);
@@ -123,6 +131,10 @@ export const apiSend = <T>(
   path: string,
   body?: unknown,
 ) => apiFetch<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+
+/** POST a multipart form (e.g. a receipt file with its fields). */
+export const apiPostForm = <T>(path: string, form: FormData) =>
+  apiFetch<T>(path, { method: 'POST', body: form });
 
 /** Human-readable message for an error from apiFetch (falls back to a generic Thai message). */
 export function errorMessage(err: unknown): string {

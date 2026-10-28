@@ -43,6 +43,9 @@ const envSchema = z.object({
   SMTP_PASS: optional,
   SMTP_FROM: z.string().default('GET POINT <no-reply@getpoint.local>'),
 
+  /** Folder for uploaded receipt files (relative to apps/api, or absolute). */
+  RECEIPT_STORAGE_DIR: z.string().min(1).default('storage/receipts'),
+
   // ---- LOGA (points system). "mock" = built-in fake LOGA, no credentials needed ----
   LOGA_MODE: z.enum(['mock', 'live']).default('mock'),
   LOGA_BASE_URL: z.string().url().default('https://loga.app/api'),
