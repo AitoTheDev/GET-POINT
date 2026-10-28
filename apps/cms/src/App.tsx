@@ -10,11 +10,13 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { ShopsPage } from './pages/shops/ShopsPage';
 import { UsersPage } from './pages/users/UsersPage';
 
 /** Pages built so far; every other menu shows a placeholder naming its session. */
 const pages: Partial<Record<Menu, ReactElement>> = {
   [Menu.USERS]: <UsersPage />,
+  [Menu.SHOPS]: <ShopsPage />,
 };
 
 export function AppRoutes() {

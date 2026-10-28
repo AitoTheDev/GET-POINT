@@ -79,26 +79,41 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-/** Fetch wrapper: adds the access token and retries once after renewing an expired session. */
+/** Send with the access token; on 401 renew the session once and retry. */
+async function sendWithRenewal(path: string, init?: RequestInit): Promise<Response> {
+  const res = await send(path, init);
+  if (res.status !== 401 || !accessToken || path.startsWith('/auth/')) return res;
+
+  const renewed = await refreshSession();
+  if (renewed) return send(path, init);
+  accessToken = null;
+  onSessionLost?.();
+  return res;
+}
+
+async function toError(res: Response): Promise<ApiRequestError> {
+  const body = await res.json().catch(() => null);
+  const message = (body as Partial<ApiError> | null)?.message ?? res.statusText;
+  return new ApiRequestError(res.status, body, message);
+}
+
+/** JSON fetch wrapper used by every API call. */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  let res = await send(path, init);
+  const res = await sendWithRenewal(path, init);
+  if (!res.ok) throw await toError(res);
+  return (res.status === 204 ? null : await res.json().catch(() => null)) as T;
+}
 
-  if (res.status === 401 && accessToken && !path.startsWith('/auth/')) {
-    const renewed = await refreshSession();
-    if (renewed) {
-      res = await send(path, init);
-    } else {
-      accessToken = null;
-      onSessionLost?.();
-    }
-  }
-
-  const body = res.status === 204 ? null : await res.json().catch(() => null);
-  if (!res.ok) {
-    const message = (body as Partial<ApiError> | null)?.message ?? res.statusText;
-    throw new ApiRequestError(res.status, body, message);
-  }
-  return body as T;
+/** Download a file (e.g. Excel export) and hand it to the browser as `filename`. */
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  const res = await sendWithRenewal(path);
+  if (!res.ok) throw await toError(res);
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export const apiGet = <T>(path: string) => apiFetch<T>(path);

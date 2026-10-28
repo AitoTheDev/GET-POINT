@@ -38,10 +38,13 @@ export async function createTestApp() {
   return { app, outbox };
 }
 
-/** Empty all tables, then insert roles, one community with two locations and three users. */
+/**
+ * Empty all tables (and restart the COM/LOC/S code counters), then insert roles,
+ * one community with two locations (COM001, LOC001, LOC002) and three users.
+ */
 export async function resetData(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE audit_logs, password_reset_tokens, auth_sessions, user_scopes, users, role_permissions, roles, locations, communities CASCADE',
+    'TRUNCATE audit_logs, password_reset_tokens, auth_sessions, user_scopes, users, role_permissions, roles, shops, shop_categories, locations, communities RESTART IDENTITY CASCADE',
   );
 
   const roles: Record<string, string> = {};
@@ -57,12 +60,12 @@ export async function resetData(prisma: PrismaClient) {
     roles[role.key] = saved.id;
   }
 
-  const community = await prisma.community.create({ data: { code: 'COM001', name: 'Community' } });
+  const community = await prisma.community.create({ data: { name: 'Community' } });
   const locA = await prisma.location.create({
-    data: { code: 'LOC001', name: 'Mall A', communityId: community.id },
+    data: { name: 'Mall A', communityId: community.id },
   });
   const locB = await prisma.location.create({
-    data: { code: 'LOC002', name: 'Mall B', communityId: community.id },
+    data: { name: 'Mall B', communityId: community.id },
   });
 
   const passwordHash = await hashPassword(PASSWORD);
