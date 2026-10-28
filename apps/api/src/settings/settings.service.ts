@@ -49,6 +49,7 @@ const SCHEMAS: { [K in SettingKey]: z.ZodType<SettingsValues[K], z.ZodTypeDef, u
     ),
     lineId: optionalText(50, 'LINE ID'),
   }),
+  memberSignup: z.object({ verifyPhone: z.boolean() }).strict(),
   rejectReasons: z
     .object(
       Object.fromEntries(

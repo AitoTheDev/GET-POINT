@@ -55,6 +55,19 @@ const envSchema = z.object({
   LOGA_DEVICE_ID: z.string().min(1).default('GETPOINT-API'),
   LOGA_CARD_ID: optional,
   LOGA_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+
+  // ---- LINE (member app). "mock" = development login without LINE; refused in production ----
+  LINE_MODE: z.enum(['mock', 'live']).default('mock'),
+  /** LINE Login channel ID: the "audience" of the LIFF ID tokens we accept. */
+  LINE_CHANNEL_ID: optional,
+  /** LIFF app ID (from the LINE Developers console), sent to the member app. */
+  LIFF_ID: optional,
+  /** Member-app session length (minutes); the app logs in again silently afterwards. */
+  LIFF_SESSION_MINUTES: z.coerce.number().int().positive().default(120),
+
+  // ---- SMS for phone codes (only used when "verify phone by SMS" is on in Settings) ----
+  /** mock = codes are printed in the API console (development only). */
+  SMS_PROVIDER: z.enum(['mock']).default('mock'),
 });
 
 const LIVE_LOGA_KEYS = ['LOGA_USERNAME', 'LOGA_PASSWORD', 'LOGA_CARD_ID'] as const;
@@ -65,11 +78,26 @@ export type Env = z.infer<typeof envSchema>;
 export function validateEnv(raw: Record<string, unknown>): Env {
   const result = envSchema
     .superRefine((env, ctx) => {
-      if (env.LOGA_MODE !== 'live') return;
-      for (const key of LIVE_LOGA_KEYS) {
-        if (!env[key]) {
-          ctx.addIssue({ code: 'custom', path: [key], message: 'required when LOGA_MODE=live' });
+      if (env.LOGA_MODE === 'live') {
+        for (const key of LIVE_LOGA_KEYS) {
+          if (!env[key]) {
+            ctx.addIssue({ code: 'custom', path: [key], message: 'required when LOGA_MODE=live' });
+          }
         }
+      }
+      if (env.LINE_MODE === 'live') {
+        for (const key of ['LINE_CHANNEL_ID', 'LIFF_ID'] as const) {
+          if (!env[key]) {
+            ctx.addIssue({ code: 'custom', path: [key], message: 'required when LINE_MODE=live' });
+          }
+        }
+      } else if (env.NODE_ENV === 'production') {
+        // The mock login lets anyone act as any LINE user.
+        ctx.addIssue({
+          code: 'custom',
+          path: ['LINE_MODE'],
+          message: 'must be live in production',
+        });
       }
     })
     .safeParse(raw);

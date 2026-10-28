@@ -1,6 +1,6 @@
 import { TagsOutlined } from '@ant-design/icons';
 import type { SettingsValues } from '@getpoint/shared';
-import { Button, Col, Form, Input, Row } from 'antd';
+import { Alert, Button, Col, Descriptions, Form, Input, Row, Switch, Typography } from 'antd';
 import { useState } from 'react';
 import type { SettingsPage } from '../../api/settings';
 import { CategoriesModal } from '../shops/CategoriesModal';
@@ -82,6 +82,75 @@ export function OrganisationTab({ data, canManage }: TabProps) {
           <CategoriesModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
         )}
       </Col>
+      <Col xs={24} xl={12}>
+        <MemberSignupCard data={data} canManage={canManage} />
+      </Col>
     </Row>
+  );
+}
+
+/** Sign-up in the LINE member app: LINE connection status and the SMS phone check switch. */
+function MemberSignupCard({ data, canManage }: TabProps) {
+  const { save, saving, error } = useSettingSave('memberSignup');
+  const [verifyPhone, setVerifyPhone] = useState(data.values.memberSignup.verifyPhone);
+  const { line, sms } = data;
+  return (
+    <SettingCard
+      title="สมัครสมาชิกผ่าน LINE"
+      description="สมาชิกสมัครเองในแอป LINE (LIFF) ด้วยเบอร์โทร ชื่อ และ Community"
+      settingKey="memberSignup"
+      changes={data.changes}
+      error={error}
+      saving={saving}
+      onSave={canManage ? () => save({ verifyPhone }) : undefined}
+    >
+      <Descriptions
+        column={1}
+        size="small"
+        bordered
+        styles={{ label: { width: 170 } }}
+        items={[
+          {
+            label: 'การเข้าสู่ระบบ LINE',
+            children:
+              line.mode === 'mock' ? 'LINE จำลอง (สำหรับทดสอบ ไม่ต้องใช้ LINE จริง)' : 'LINE จริง',
+          },
+          { label: 'LIFF ID', children: line.liffId ?? 'ยังไม่ได้ตั้งค่า' },
+          {
+            label: 'LINE Login Channel',
+            children: line.channelIdSet ? 'ตั้งค่าแล้ว' : 'ยังไม่ได้ตั้งค่า',
+          },
+          {
+            label: 'ผู้ให้บริการ SMS',
+            children:
+              sms.provider === 'mock' ? 'SMS จำลอง (รหัสแสดงใน log ของเซิร์ฟเวอร์)' : sms.provider,
+          },
+        ]}
+      />
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 16 }}>
+        <Switch
+          id="verifyPhone"
+          checked={verifyPhone}
+          disabled={!canManage}
+          onChange={setVerifyPhone}
+        />
+        <label htmlFor="verifyPhone" style={{ cursor: canManage ? 'pointer' : undefined }}>
+          <Typography.Text strong>ยืนยันเบอร์โทรด้วยรหัส SMS ตอนสมัคร</Typography.Text>
+          <br />
+          <Typography.Text type="secondary">
+            ปิดอยู่: ใช้เบอร์ที่สมาชิกกรอกได้ทันที · เปิด: ต้องกรอกรหัส 6
+            หลักที่ส่งไปยังเบอร์นั้นก่อน
+          </Typography.Text>
+        </label>
+      </div>
+      {verifyPhone && !sms.ready && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginTop: 12 }}
+          message="ยังไม่มีผู้ให้บริการ SMS ที่ใช้งานจริง สมาชิกจะสมัครไม่ได้จนกว่าจะตั้งค่า SMS"
+        />
+      )}
+    </SettingCard>
   );
 }

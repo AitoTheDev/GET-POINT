@@ -28,6 +28,8 @@ export interface SettingsValues {
   defaultClaimDays: number | null;
   /** Shown to members who need help (LINE flow). */
   supportContact: { phone: string | null; lineId: string | null };
+  /** LINE sign-up: true = members must type an SMS code sent to their phone. */
+  memberSignup: { verifyPhone: boolean };
   rejectReasons: Record<RejectReason, RejectReasonSetting>;
 }
 
@@ -38,6 +40,7 @@ export const SETTING_KEYS: SettingKey[] = [
   'uploadLimits',
   'defaultClaimDays',
   'supportContact',
+  'memberSignup',
   'rejectReasons',
 ];
 
@@ -53,6 +56,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   uploadLimits: { ...UPLOAD_LIMIT_CAPS },
   defaultClaimDays: 30,
   supportContact: { phone: null, lineId: null },
+  memberSignup: { verifyPhone: false },
   rejectReasons: Object.fromEntries(
     REJECT_REASONS.map((reason, i) => [
       reason,

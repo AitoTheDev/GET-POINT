@@ -25,12 +25,12 @@ import { logaCuid, LogaRequestError, LogaUnavailableError } from '../loga/loga.t
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateMemberDto, ListMembersQuery, MemberFilterQuery, UpdateMemberDto } from './dto';
 
-const memberInclude = {
+export const memberInclude = {
   community: { select: { id: true, code: true, name: true } },
   createdBy: { select: { id: true, name: true } },
 } satisfies Prisma.MemberInclude;
 
-type MemberRow = Prisma.MemberGetPayload<{ include: typeof memberInclude }>;
+export type MemberRow = Prisma.MemberGetPayload<{ include: typeof memberInclude }>;
 
 const NOT_FOUND = 'ไม่พบสมาชิกนี้';
 const PHONE_TAKEN = 'เบอร์โทรนี้เป็นสมาชิกใน Community นี้อยู่แล้ว';
@@ -203,7 +203,12 @@ export class MembersService {
    * member (shown in the CMS with a retry button) instead of failing the request.
    */
   async link(id: string, user: RequestUser) {
-    const member = await this.findAccessible(id, user);
+    return this.linkMember(await this.findAccessible(id, user), user.id);
+  }
+
+  /** Same as link(), for a member already loaded; `actorId` null = the member themself (LINE). */
+  async linkMember(member: MemberRow, actorId: string | null) {
+    const id = member.id;
     if (member.logaLinkStatus === 'LINKED') return toMember(member);
 
     let data: Prisma.MemberUpdateInput;
@@ -231,7 +236,7 @@ export class MembersService {
     });
     await this.audit.log({
       action: saved.logaLinkStatus === 'LINKED' ? 'member.loga_linked' : 'member.loga_link_failed',
-      actorId: user.id,
+      actorId,
       entityType: 'member',
       entityId: id,
       metadata: {

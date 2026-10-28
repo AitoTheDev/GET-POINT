@@ -544,3 +544,22 @@ model AuditLog {
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
+
+/// SMS codes proving a member owns a phone number (LIFF sign-up, when switched on in Settings).
+model PhoneVerification {
+  id         String    @id @default(uuid()) @db.Uuid
+  /// LINE user asking (the code only works for the same LINE account).
+  lineUserId String    @map("line_user_id")
+  phone      String
+  /// SHA-256 of the code; the code itself is never stored.
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at")
+  /// Wrong guesses so far; the code stops working after 5.
+  attempts   Int       @default(0)
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([lineUserId, createdAt])
+  @@index([phone, createdAt])
+  @@map("phone_verifications")
+}

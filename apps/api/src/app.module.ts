@@ -7,6 +7,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env';
 import { HealthController } from './health/health.controller';
+import { LiffModule } from './liff/liff.module';
 import { LogaModule } from './loga/loga.module';
 import { MailModule } from './mail/mail.module';
 import { MembersModule } from './members/members.module';
@@ -46,6 +47,7 @@ import { UsersModule } from './users/users.module';
     ReportsModule,
     ActivityLogModule,
     NotificationsModule,
+    LiffModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

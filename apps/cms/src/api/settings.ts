@@ -25,6 +25,9 @@ export interface SettingsPage {
     };
   };
   email: { configured: boolean; host: string | null; from: string };
+  /** Member app (LIFF). */
+  line: { mode: 'mock' | 'live'; liffId: string | null; channelIdSet: boolean };
+  sms: { provider: string; ready: boolean };
   system: {
     database: 'up' | 'down';
     environment: string;

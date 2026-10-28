@@ -81,6 +81,17 @@ export class SettingsController {
         host: smtpHost ?? null,
         from: this.config.get('SMTP_FROM', { infer: true }),
       },
+      // Member app (LIFF). IDs are not secret (they're in the LIFF URL); only whether they're set.
+      line: {
+        mode: this.config.get('LINE_MODE', { infer: true }),
+        liffId: this.config.get('LIFF_ID', { infer: true }) ?? null,
+        channelIdSet: Boolean(this.config.get('LINE_CHANNEL_ID', { infer: true })),
+      },
+      sms: {
+        provider: this.config.get('SMS_PROVIDER', { infer: true }),
+        // The mock prints codes in the log: it can't be used in production.
+        ready: this.config.get('NODE_ENV', { infer: true }) !== 'production',
+      },
       system: await this.systemInfo(),
     };
   }

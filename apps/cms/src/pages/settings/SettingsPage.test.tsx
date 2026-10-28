@@ -20,6 +20,8 @@ const page: SettingsPage = {
     transfers: { pending: 2, failed: 1, unknown: 0, succeeded: 7, lastSentAt: null },
   },
   email: { configured: false, host: null, from: 'GET POINT <no-reply@getpoint.local>' },
+  line: { mode: 'mock', liffId: null, channelIdSet: false },
+  sms: { provider: 'mock', ready: true },
   system: {
     database: 'up',
     environment: 'development',
